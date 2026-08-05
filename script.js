@@ -699,6 +699,20 @@ function runReelAnimation(resultSkin, onDone){
     if(slot > 0) items[slot] = pickSkinFromRarity(RARITIES[5+Math.floor(Math.random()*2)].id);
   }
   items.push(resultSkin); // land on the real result
+  const targetIndex = items.length - 1; // remember where the winner sits before padding the tail
+
+  // pad a run of items AFTER the winner too, so the strip keeps going
+  // past the pointer instead of visibly running out right at the result
+  const TRAIL_COUNT = 10 + Math.floor(Math.random()*8);
+  for(let i=0;i<TRAIL_COUNT;i++){
+    let s;
+    if(isKnifeCrate){
+      s = Math.random()<0.12 ? pickSkinFromRarity("exclusive") : pickSkinFromRarity("knife");
+    } else {
+      s = pickSkinFromRarity(weightedPickRarity(1.0, 0));
+    }
+    items.push(s);
+  }
 
   reel.innerHTML = items.map((s,i)=>`
     <div class="reel-item rarity-${rarityMeta(s.rarity).css}" style="--ri-color:${rarityMeta(s.rarity).color}">
@@ -714,7 +728,6 @@ function runReelAnimation(resultSkin, onDone){
   const itemWidth = firstItem.getBoundingClientRect().width + parseFloat(fics.marginLeft) + parseFloat(fics.marginRight);
 
   const wrapWidth = reel.parentElement.offsetWidth;
-  const targetIndex = items.length - 1;
   const jitter = (Math.random()*100-50);
   const finalOffset = (targetIndex*itemWidth) - (wrapWidth/2) + (itemWidth/2) + jitter;
   const overshoot = 18 + Math.random()*34; // spin slightly past the mark, then settle back
