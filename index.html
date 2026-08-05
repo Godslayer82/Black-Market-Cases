@@ -145,6 +145,7 @@
     <div class="jackpot-wrap">
       <div class="jackpot-wheel-wrap">
         <div class="jackpot-wheel" id="jackpotWheel"></div>
+        <div class="jackpot-hub"></div>
         <div class="jackpot-pointer"></div>
       </div>
       <div id="jackpotPot" class="jackpot-pot">Pot: $0</div>
@@ -161,9 +162,13 @@
     <h2>Coinflip</h2>
     <p class="sub">Pick a side. Win and double your wager.</p>
     <div class="coinflip-wrap">
-      <div class="coin" id="coin">
-        <div class="coin-face coin-heads">H</div>
-        <div class="coin-face coin-tails">T</div>
+      <div class="coin-stage">
+        <div class="coin-shadow"></div>
+        <div class="coin" id="coin">
+          <div class="coin-face coin-heads"><span>▲</span></div>
+          <div class="coin-face coin-tails"><span>▼</span></div>
+          <div class="coin-edge"></div>
+        </div>
       </div>
       <div class="bet-controls">
         <input type="number" id="coinflipBet" min="1" value="10">
@@ -179,7 +184,11 @@
     <h2>Roulette</h2>
     <p class="sub">Bet on a color. Green pays 14x, Red/Black pay 2x.</p>
     <div class="roulette-wrap">
-      <div class="roulette-wheel" id="rouletteWheel"></div>
+      <div class="roulette-wheel-wrap">
+        <div class="roulette-wheel" id="rouletteWheel"></div>
+        <div class="roulette-pointer"></div>
+        <div class="roulette-hub"></div>
+      </div>
       <div class="bet-controls">
         <input type="number" id="rouletteBet" min="1" value="10">
         <button class="btn roul-btn red" data-color="red">Red (2x)</button>

@@ -31,6 +31,145 @@ const ICONS_BY_WEAPON = {
   "Galil AR":"🔫","P90":"🔫","UMP-45":"🔫","Five-SeveN":"🔫"
 };
 
+/* ---------------- PROCEDURAL SKIN ICONS ----------------
+   Every icon is generated on the fly: a weapon-category silhouette
+   (rifle / pistol / smg / shotgun / sniper / knife shapes) painted
+   with a gradient + pattern derived from the skin's own name, so
+   no two skins render identically even when they share a weapon. */
+function hashStr(s){
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return Math.abs(h);
+}
+function seededRand(seed, i){
+  const x = Math.sin(seed*12.9898 + i*78.233)*43758.5453;
+  return x - Math.floor(x);
+}
+const WEAPON_CATEGORY = {
+  "Desert Eagle":"pistol","USP-S":"pistol","Glock-18":"pistol","P250":"pistol","Five-SeveN":"pistol",
+  "AK-47":"rifle","M4A4":"rifle","M4A1-S":"rifle","FAMAS":"rifle","Galil AR":"rifle",
+  "MAC-10":"smg","MP7":"smg","MP9":"smg","UMP-45":"smg","P90":"smg",
+  "Nova":"shotgun","XM1014":"shotgun",
+  "AWP":"sniper","SSG 08":"sniper","G3SG1":"sniper"
+};
+const KNIFE_SHAPE = {
+  "Karambit":"karambit","Talon Knife":"karambit","Falchion Knife":"karambit","Skeleton Knife":"karambit",
+  "Butterfly Knife":"butterfly"
+};
+const SHAPE_MARKUP = {
+  pistol:`<rect x="46" y="14" width="34" height="9" rx="1"/><rect x="70" y="16" width="14" height="5" rx="1"/><path d="M46 23 L38 23 L30 44 L44 44 L50 23 Z"/><rect x="42" y="23" width="10" height="6"/>`,
+  rifle:`<rect x="10" y="20" width="16" height="9" rx="1"/><rect x="24" y="17" width="50" height="12" rx="1"/><rect x="74" y="20" width="22" height="5" rx="1"/><path d="M40 29 L34 45 L46 45 L50 29 Z"/><rect x="58" y="29" width="8" height="10" rx="1"/>`,
+  smg:`<rect x="14" y="19" width="14" height="7" rx="1"/><rect x="26" y="15" width="42" height="13" rx="1"/><rect x="68" y="18" width="20" height="6" rx="1"/><path d="M40 28 L34 46 L44 46 L48 28 Z"/><rect x="55" y="28" width="7" height="9" rx="1"/>`,
+  shotgun:`<path d="M8 20 L30 18 L30 30 L12 34 Z"/><rect x="28" y="20" width="64" height="10" rx="2"/><rect x="44" y="30" width="20" height="8" rx="2"/>`,
+  sniper:`<rect x="14" y="24" width="80" height="5" rx="1"/><rect x="14" y="18" width="28" height="12" rx="1"/><rect x="26" y="8" width="24" height="7" rx="1"/><rect x="32" y="4" width="3" height="6"/><rect x="44" y="4" width="3" height="6"/><path d="M88 29 L94 40 M88 29 L96 34" stroke-width="2"/>`,
+  straight:`<path d="M8 24 L70 19 L72 23 L70 27 L8 30 Z"/><rect x="70" y="16" width="24" height="16" rx="3"/>`,
+  butterfly:`<path d="M10 25 L55 15 L58 20 L20 32 Z"/><path d="M10 25 L55 35 L58 30 L20 18 Z"/><rect x="55" y="12" width="30" height="10" rx="2" transform="rotate(-8 55 12)"/><rect x="55" y="28" width="30" height="10" rx="2" transform="rotate(8 55 28)"/>`,
+  karambit:`<path d="M20 30 Q55 5 82 22 Q64 34 42 30 Q34 34 26 38 Z"/><circle cx="16" cy="34" r="7"/>`,
+  exclusive:`<polygon points="50,6 61,34 91,34 67,52 76,82 50,64 24,82 33,52 9,34 39,34"/><circle cx="50" cy="46" r="9"/>`
+};
+const SUFFIX_PALETTES = [
+  { test:/forest|jungle|boreal|ddpat/i, hues:[112,96,144], pattern:"camo" },
+  { test:/sand|desert|urban masked|safari/i, hues:[38,44,28], pattern:"camo" },
+  { test:/ocean|blue|storm|steel|laminate/i, hues:[200,206,184], pattern:"sweep" },
+  { test:/fire|blaze|wildfire|dragon|crimson|blood|vulcan|scorched/i, hues:[8,22,354], pattern:"sweep" },
+  { test:/fade|doppler|marble/i, hues:[286,320,204], pattern:"marble" },
+  { test:/web/i, hues:[4,14,350], pattern:"web" },
+  { test:/night|shadow|stained/i, hues:[236,246,222], pattern:"sweep" },
+  { test:/gold|emperor|black sun|void|dragon lore/i, hues:[46,32,300], pattern:"marble" },
+  { test:/hyper beast|fever dream|neon rider|printstream|asiimov/i, hues:[330,190,54], pattern:"marble" }
+];
+function skinPalette(item){
+  const h = hashStr(item.name);
+  const p = SUFFIX_PALETTES.find(p=>p.test.test(item.suffix||""));
+  let hues, pattern;
+  if(p){
+    hues = p.hues.map((hu,i)=> (hu + (h>>(i*3))%14 - 7 + 360)%360);
+    pattern = p.pattern;
+  } else {
+    const base = h%360;
+    hues = [base, (base+35)%360, (base+300)%360];
+    pattern = ["sweep","camo","web"][h%3];
+  }
+  const rIdx = RARITY_INDEX[item.rarity]!==undefined ? RARITY_INDEX[item.rarity] : 0;
+  const sat = rIdx>=4 ? 72 : 42;
+  const light = rIdx>=6 ? 60 : 48;
+  return { colors: hues.map(hu=>`hsl(${hu},${sat}%,${light}%)`), pattern, seed:h };
+}
+function buildOverlay(pattern, colors, seed, isExclusive, H){
+  if(isExclusive){
+    let dots="";
+    for(let i=0;i<7;i++){
+      const cx=(15+seededRand(seed,i)*70).toFixed(1), cy=(8+seededRand(seed,i+9)*76).toFixed(1);
+      const r=(1.2+seededRand(seed,i+20)*1.8).toFixed(1);
+      dots += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" opacity="${(0.35+seededRand(seed,i+30)*0.5).toFixed(2)}"/>`;
+    }
+    return dots;
+  }
+  switch(pattern){
+    case "camo":{
+      let out="";
+      for(let i=0;i<6;i++){
+        const cx=(seededRand(seed,i)*100).toFixed(1), cy=(seededRand(seed,i+10)*H).toFixed(1);
+        const rx=(8+seededRand(seed,i+20)*14).toFixed(1), ry=(5+seededRand(seed,i+30)*8).toFixed(1);
+        const c = i%2===0? colors[1]: colors[2];
+        out += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${c}" opacity="0.55" transform="rotate(${(seededRand(seed,i+40)*40-20).toFixed(0)} ${cx} ${cy})"/>`;
+      }
+      return out;
+    }
+    case "sweep":
+      return `<rect x="-20" y="-20" width="55" height="${H+40}" fill="#ffffff" opacity="0.16" transform="rotate(25 30 ${H/2})"/>
+        <rect x="42" y="-20" width="26" height="${H+40}" fill="${colors[2]}" opacity="0.35" transform="rotate(25 60 ${H/2})"/>`;
+    case "marble":{
+      let out="";
+      for(let i=0;i<5;i++){
+        const cx=(seededRand(seed,i+1)*100).toFixed(1), cy=(seededRand(seed,i+11)*H).toFixed(1), r=(6+seededRand(seed,i+21)*10).toFixed(1);
+        out += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${i%2?colors[2]:colors[1]}" opacity="0.4"/>`;
+      }
+      out += `<rect x="0" y="0" width="100" height="${H}" fill="#fff" opacity="0.05"/>`;
+      return out;
+    }
+    case "web":{
+      let out="";
+      for(let i=0;i<4;i++){
+        const x1=(seededRand(seed,i)*100).toFixed(1), y1=(seededRand(seed,i+5)*H).toFixed(1);
+        const x2=(seededRand(seed,i+15)*100).toFixed(1), y2=(seededRand(seed,i+25)*H).toFixed(1);
+        out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${colors[2]}" stroke-width="1" opacity="0.5"/>`;
+      }
+      return out;
+    }
+    default: return "";
+  }
+}
+function buildSkinIcon(item){
+  let category;
+  if(item.rarity==="exclusive") category = "exclusive";
+  else if(item.rarity==="knife") category = KNIFE_SHAPE[item.weapon] || "straight";
+  else category = WEAPON_CATEGORY[item.weapon] || "pistol";
+
+  const pal = skinPalette(item);
+  const shape = SHAPE_MARKUP[category];
+  const H = category==="exclusive" ? 92 : 50;
+  const gid = "g"+pal.seed, cid = "c"+pal.seed;
+  const x1 = 8 + (pal.seed%28), x2 = 92 - (pal.seed%20);
+  const overlay = buildOverlay(pal.pattern, pal.colors, pal.seed, category==="exclusive", H);
+
+  return `<svg viewBox="0 0 100 ${H}" xmlns="http://www.w3.org/2000/svg" class="skin-svg">
+    <defs>
+      <linearGradient id="${gid}" x1="${x1}%" y1="0%" x2="${x2}%" y2="100%">
+        <stop offset="0%" stop-color="${pal.colors[0]}"/>
+        <stop offset="55%" stop-color="${pal.colors[1]}"/>
+        <stop offset="100%" stop-color="${pal.colors[2]}"/>
+      </linearGradient>
+      <clipPath id="${cid}">${shape}</clipPath>
+    </defs>
+    <g clip-path="url(#${cid})">
+      <rect x="0" y="0" width="100" height="${H}" fill="url(#${gid})"/>
+      ${overlay}
+    </g>
+    <g fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1.4">${shape}</g>
+  </svg>`;
+}
+
 function generateSkinDatabase(){
   const db = { consumer:[], industrial:[], milspec:[], restricted:[], classified:[], covert:[] };
   const suffixSets = {
@@ -452,7 +591,7 @@ function renderCases(){
   const grid = document.getElementById("casesGrid");
   grid.innerHTML = CASES.map(c=>`
     <div class="case-card" data-case="${c.id}" data-kind="weapon">
-      <div class="case-icon">${c.icon}</div>
+      <div class="case-icon-badge"><span class="case-icon">${c.icon}</span></div>
       <div class="case-name">${c.name}</div>
       <div class="case-price">${formatMoney(c.price)}</div>
       ${rarityStripHTML(c.oddsBoost)}
@@ -465,7 +604,7 @@ function renderKnifeCases(){
   const grid = document.getElementById("knivesGrid");
   grid.innerHTML = KNIFE_CASES.map(c=>`
     <div class="case-card" data-case="${c.id}" data-kind="knife">
-      <div class="case-icon">${c.icon}</div>
+      <div class="case-icon-badge"><span class="case-icon">${c.icon}</span></div>
       <div class="case-name">${c.name}</div>
       <div class="case-price">${formatMoney(c.price)}</div>
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
@@ -537,26 +676,48 @@ function runReelAnimation(resultSkin, onDone){
   resultBox.classList.add("hidden");
   overlay.classList.remove("hidden");
 
-  // Build a strip of random filler items ending in the true result
-  const ITEM_COUNT = 40;
+  // Build a strip of filler items ending in the true result. Length,
+  // filler odds, and a possible late "near miss" all vary per spin so
+  // no two openings feel identical.
+  const ITEM_COUNT = 36 + Math.floor(Math.random()*20); // 36-55 items
+  const isKnifeCrate = RARITY_INDEX[resultSkin.rarity] >= RARITY_INDEX["knife"];
   const items = [];
   for(let i=0;i<ITEM_COUNT-1;i++){
-    const randRarity = RARITIES[Math.floor(Math.random()*6)].id; // filler skews toward common tiers visually
-    items.push(pickSkinFromRarity(randRarity));
+    let s;
+    if(isKnifeCrate){
+      s = Math.random()<0.12 ? pickSkinFromRarity("exclusive") : pickSkinFromRarity("knife");
+    } else {
+      s = pickSkinFromRarity(weightedPickRarity(1.0, 0));
+    }
+    items.push(s);
+  }
+  // sprinkle a late "near miss" — a high-rarity item a couple slots
+  // before the landing spot — to build tension, unless the real drop
+  // already is one.
+  if(!isKnifeCrate && RARITY_INDEX[resultSkin.rarity] < 5 && Math.random() < 0.6){
+    const slot = ITEM_COUNT - 2 - Math.floor(Math.random()*3);
+    if(slot > 0) items[slot] = pickSkinFromRarity(RARITIES[5+Math.floor(Math.random()*2)].id);
   }
   items.push(resultSkin); // land on the real result
 
   reel.innerHTML = items.map((s,i)=>`
     <div class="reel-item rarity-${rarityMeta(s.rarity).css}" style="--ri-color:${rarityMeta(s.rarity).color}">
-      <div class="ri-icon">${s.icon}</div>
+      <div class="ri-icon">${buildSkinIcon(s)}</div>
       <div class="ri-name">${s.name}</div>
     </div>
   `).join("");
 
-  const itemWidth = 164; // width + margins, must match CSS .reel-item
+  // measure the actual rendered item width so the math stays correct
+  // no matter what the CSS does
+  const firstItem = reel.children[0];
+  const fics = getComputedStyle(firstItem);
+  const itemWidth = firstItem.getBoundingClientRect().width + parseFloat(fics.marginLeft) + parseFloat(fics.marginRight);
+
   const wrapWidth = reel.parentElement.offsetWidth;
   const targetIndex = items.length - 1;
-  const finalOffset = (targetIndex*itemWidth) - (wrapWidth/2) + (itemWidth/2) + (Math.random()*50-25);
+  const jitter = (Math.random()*100-50);
+  const finalOffset = (targetIndex*itemWidth) - (wrapWidth/2) + (itemWidth/2) + jitter;
+  const overshoot = 18 + Math.random()*34; // spin slightly past the mark, then settle back
 
   reel.style.transition = "none";
   reel.style.transform = "translateX(0px)";
@@ -564,16 +725,23 @@ function runReelAnimation(resultSkin, onDone){
   // force reflow
   void reel.offsetWidth;
 
-  const duration = openAnimDuration();
-  reel.style.transition = `transform ${duration}ms cubic-bezier(.1,.7,.15,1)`;
+  const duration = Math.max(900, openAnimDuration() + Math.floor(Math.random()*500-200));
+  const mainDuration = Math.max(850, Math.round(duration*0.86));
+  reel.style.transition = `transform ${mainDuration}ms cubic-bezier(.11,.75,.1,1.02)`;
   requestAnimationFrame(()=>{
-    reel.style.transform = `translateX(-${finalOffset}px)`;
+    reel.style.transform = `translateX(-${finalOffset+overshoot}px)`;
   });
 
-  const tickInterval = setInterval(()=>sfx("spin"), 90);
+  const tickInterval = setInterval(()=>sfx("spin"), 82+Math.random()*22);
   // ease off the blur/motion styling as the reel decelerates near the end
-  setTimeout(()=>reel.classList.remove("spinning"), duration*0.7);
-  setTimeout(()=>reel.classList.add("settling"), duration*0.82);
+  setTimeout(()=>reel.classList.remove("spinning"), mainDuration*0.7);
+  setTimeout(()=>reel.classList.add("settling"), mainDuration*0.85);
+
+  // small bounce-back correction onto the exact winning item
+  setTimeout(()=>{
+    reel.style.transition = `transform 260ms cubic-bezier(.32,.6,.4,1)`;
+    reel.style.transform = `translateX(-${finalOffset}px)`;
+  }, mainDuration);
 
   setTimeout(()=>{
     clearInterval(tickInterval);
@@ -585,7 +753,7 @@ function runReelAnimation(resultSkin, onDone){
       setTimeout(()=>document.body.classList.remove("screen-shake"), 400);
     }
     onDone();
-  }, duration+80);
+  }, mainDuration+300);
 }
 
 function showResultCard(item){
@@ -597,7 +765,7 @@ function showResultCard(item){
   card.className = "result-card rarity-"+meta.css + (rIdx>=6? " holo":"");
   card.style.setProperty("--ri-color", meta.color);
   card.innerHTML = `
-    <div class="ri-icon">${item.icon}</div>
+    <div class="ri-icon">${buildSkinIcon(item)}</div>
     <div class="ri-name">${item.name}</div>
     <div class="ri-rarity text-${meta.css}">${meta.label}</div>
     <div class="ri-value">${formatMoney(item.value)}</div>
@@ -655,7 +823,7 @@ function skinCardHTML(item, opts){
   const meta = rarityMeta(item.rarity);
   return `
     <div class="skin-card rarity-${meta.css}" data-uid="${item.uid}">
-      <div class="skin-icon">${item.icon}</div>
+      <div class="skin-icon">${buildSkinIcon(item)}</div>
       <div class="skin-name">${item.name}</div>
       <div class="skin-rarity text-${meta.css}">${meta.label}</div>
       <div class="skin-value">${formatMoney(item.value)}</div>
@@ -731,7 +899,7 @@ function renderTradeup(){
     const sel = tradeupSelection.has(it.uid) ? "selected" : "";
     return `
     <div class="skin-card rarity-${meta.css} ${sel}" data-uid="${it.uid}">
-      <div class="skin-icon">${it.icon}</div>
+      <div class="skin-icon">${buildSkinIcon(it)}</div>
       <div class="skin-name">${it.name}</div>
       <div class="skin-rarity text-${meta.css}">${meta.label}</div>
       <div class="skin-value">${formatMoney(it.value)}</div>
