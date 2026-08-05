@@ -14,6 +14,10 @@ const RARITIES = [
   { id:"covert",     label:"Covert",         css:"covert",     color:"#eb4b4b", weight:2.56, valueMin:1200, valueMax:5000 },
   { id:"knife",      label:"Knife",          css:"knife",      color:"#ffd700", weight:0.64, valueMin:5000, valueMax:20000 },
   { id:"exclusive",  label:"Exclusive",      css:"exclusive",  color:"#ff00d4", weight:0.02, valueMin:20000,valueMax:100000 },
+  // Contraband has weight 0 so it can NEVER be selected by the normal
+  // weightedPickRarity pool — it is only ever handed out directly by
+  // the rotating limited-time case logic further down this file.
+  { id:"contraband", label:"Contraband",     css:"contraband", color:"#ff1a1a", weight:0,    valueMin:100000,valueMax:500000 },
 ];
 const RARITY_INDEX = {};
 RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
@@ -65,7 +69,8 @@ const SHAPE_MARKUP = {
   straight:`<path d="M8 24 L70 19 L72 23 L70 27 L8 30 Z"/><rect x="70" y="16" width="24" height="16" rx="3"/>`,
   butterfly:`<path d="M10 25 L55 15 L58 20 L20 32 Z"/><path d="M10 25 L55 35 L58 30 L20 18 Z"/><rect x="55" y="12" width="30" height="10" rx="2" transform="rotate(-8 55 12)"/><rect x="55" y="28" width="30" height="10" rx="2" transform="rotate(8 55 28)"/>`,
   karambit:`<path d="M20 30 Q55 5 82 22 Q64 34 42 30 Q34 34 26 38 Z"/><circle cx="16" cy="34" r="7"/>`,
-  exclusive:`<polygon points="50,6 61,34 91,34 67,52 76,82 50,64 24,82 33,52 9,34 39,34"/><circle cx="50" cy="46" r="9"/>`
+  exclusive:`<polygon points="50,6 61,34 91,34 67,52 76,82 50,64 24,82 33,52 9,34 39,34"/><circle cx="50" cy="46" r="9"/>`,
+  contraband:`<circle cx="50" cy="34" r="26"/><circle cx="40" cy="30" r="6"/><circle cx="60" cy="30" r="6"/><path d="M32 50 Q50 66 68 50 L64 78 L56 66 L50 80 L44 66 L36 78 Z"/>`
 };
 const SUFFIX_PALETTES = [
   { test:/forest|jungle|boreal|ddpat/i, hues:[112,96,144], pattern:"camo" },
@@ -142,16 +147,17 @@ function buildOverlay(pattern, colors, seed, isExclusive, H){
 }
 function buildSkinIcon(item){
   let category;
-  if(item.rarity==="exclusive") category = "exclusive";
+  if(item.rarity==="contraband") category = "contraband";
+  else if(item.rarity==="exclusive") category = "exclusive";
   else if(item.rarity==="knife") category = KNIFE_SHAPE[item.weapon] || "straight";
   else category = WEAPON_CATEGORY[item.weapon] || "pistol";
 
   const pal = skinPalette(item);
   const shape = SHAPE_MARKUP[category];
-  const H = category==="exclusive" ? 92 : 50;
+  const H = (category==="exclusive"||category==="contraband") ? 92 : 50;
   const gid = "g"+pal.seed, cid = "c"+pal.seed;
   const x1 = 8 + (pal.seed%28), x2 = 92 - (pal.seed%20);
-  const overlay = buildOverlay(pal.pattern, pal.colors, pal.seed, category==="exclusive", H);
+  const overlay = buildOverlay(pal.pattern, pal.colors, pal.seed, category==="exclusive"||category==="contraband", H);
 
   return `<svg viewBox="0 0 100 ${H}" xmlns="http://www.w3.org/2000/svg" class="skin-svg">
     <defs>
@@ -232,11 +238,33 @@ const EXCLUSIVE_DB = [
   { id:"ex5", name:"AK-47 | Emperor's Ransom", weapon:"AK-47", suffix:"Emperor's Ransom", rarity:"exclusive", icon:"👑", value:100000 },
 ];
 
+/* ---------------- CONTRABAND DATABASE ---------------- */
+// Top-of-ladder tier. Only ever reachable through LIMITED_CASES below.
+const CONTRABAND_DB = [
+  { id:"cb1", name:"★ Karambit | Blackout Cartel", weapon:"Karambit", suffix:"Blackout Cartel", rarity:"contraband", icon:"☠️", value:180000 },
+  { id:"cb2", name:"AWP | Red Ledger", weapon:"AWP", suffix:"Red Ledger", rarity:"contraband", icon:"☠️", value:220000 },
+  { id:"cb3", name:"★ Butterfly Knife | Smuggler's Mark", weapon:"Butterfly Knife", suffix:"Smuggler's Mark", rarity:"contraband", icon:"☠️", value:260000 },
+  { id:"cb4", name:"AK-47 | Iron Curtain", weapon:"AK-47", suffix:"Iron Curtain", rarity:"contraband", icon:"☠️", value:310000 },
+  { id:"cb5", name:"★ Talon Knife | Blacksite", weapon:"Talon Knife", suffix:"Blacksite", rarity:"contraband", icon:"☠️", value:420000 },
+];
+
 function allSkinsForRarity(rarityId){
   if(rarityId==="knife") return KNIFE_DB;
   if(rarityId==="exclusive") return EXCLUSIVE_DB;
+  if(rarityId==="contraband") return CONTRABAND_DB;
   return SKIN_DB[rarityId] || [];
 }
+
+/* ---------------- STICKER / CHARM DATABASE ---------------- */
+const STICKER_DEFS = [
+  { id:"st_bronze",   name:"Bronze Charm",     icon:"🔶", cost:50,   boost:0.02 },
+  { id:"st_silver",   name:"Silver Charm",     icon:"⚪", cost:150,  boost:0.04 },
+  { id:"st_gold",     name:"Gold Charm",       icon:"🟡", cost:400,  boost:0.07 },
+  { id:"st_skull",    name:"Skull Sticker",    icon:"💀", cost:900,  boost:0.10 },
+  { id:"st_diamond",  name:"Diamond Sticker",  icon:"💠", cost:2200, boost:0.15 },
+];
+const STICKER_INDEX = {};
+STICKER_DEFS.forEach(s=>STICKER_INDEX[s.id]=s);
 
 /* ---------------- CASE DEFINITIONS ---------------- */
 // Each weapon case has an odds multiplier profile (favors certain rarities slightly)
@@ -259,6 +287,45 @@ const KNIFE_CASES = [
   { id:"kcase_elite", name:"Elite Blade Crate", icon:"💼", price:4000,
     oddsBoost:1.0, exclusiveChanceMult:4, desc:"Guaranteed Knife-tier, much better shot at Exclusive." },
 ];
+
+/* ---------------- LIMITED-TIME / CONTRABAND CASES ----------------
+   These rotate daily (a new one "goes live" every real-world day) and
+   are the only source of Contraband-tier drops. */
+const LIMITED_CASES = [
+  { id:"lcase_blacksite", name:"Blacksite Case", icon:"☣️", price:2500,
+    contrabandChance:0.015, oddsBoost:2.2, desc:"Military surplus, off the books. Small shot at Contraband." },
+  { id:"lcase_redledger", name:"Red Ledger Case", icon:"📕", price:6000,
+    contrabandChance:0.04, oddsBoost:2.5, desc:"Cartel-grade crate. Much better Contraband odds." },
+];
+// deterministically pick "today's" limited case so it feels like a
+// genuine daily rotation rather than a random reshuffle on every load
+function todaysLimitedCase(){
+  const dayIndex = Math.floor(Date.now()/86400000);
+  return LIMITED_CASES[dayIndex % LIMITED_CASES.length];
+}
+function msUntilNextDay(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0,0,0,0);
+  return next.getTime() - now.getTime();
+}
+function formatCountdown(ms){
+  if(ms<0) ms=0;
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+/* ---------------- DAILY FREE CASE ---------------- */
+const FREE_CASE = { id:"free_daily", name:"Daily Free Case", icon:"🎁", price:0,
+  oddsBoost:0.6, desc:"One on the house, every 24 hours." };
+function todayDateStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+function freeCaseAvailable(){
+  return STATE.lastFreeCaseDate !== todayDateStr();
+}
 
 /* ---------------- UPGRADES ---------------- */
 function upgradeCost(base, level, growth){ return Math.round(base * Math.pow(growth, level)); }
@@ -292,6 +359,11 @@ const ACHIEVEMENT_DEFS = [
   { id:"first_jackpot", icon:"🎰", name:"High Roller", desc:"Win a jackpot round.", check:s=>s.stats.jackpotsWon>=1 },
   { id:"gen_owner", icon:"🏭", name:"Investor", desc:"Buy your first generator.", check:s=>Object.values(s.generators).some(g=>g.level>0) },
   { id:"inv_50", icon:"🎒", name:"Collector", desc:"Hold 50 items in your inventory.", check:s=>s.inventory.length>=50 },
+  { id:"first_contraband", icon:"☠️", name:"Off The Books", desc:"Unbox a Contraband item.", check:s=>(s.stats.rarityFound.contraband||0)>=1 },
+  { id:"first_free_case", icon:"🎁", name:"On The House", desc:"Claim your first Daily Free Case.", check:s=>!!s.lastFreeCaseDate },
+  { id:"first_favorite", icon:"⭐", name:"Pinned", desc:"Favorite an item to protect it from Sell All.", check:s=>s.favorites.length>=1 },
+  { id:"first_sticker", icon:"🎫", name:"Customized", desc:"Apply a sticker or charm to a weapon.", check:s=>(s.stats.stickersApplied||0)>=1 },
+  { id:"first_crash_win", icon:"📈", name:"Cashed Out", desc:"Win a round of Crash.", check:s=>s.stats.crashesWon>=1 },
 ];
 
 /* ============================================================
@@ -304,11 +376,14 @@ function defaultState(){
     username:"Guest",
     avatarColor:"#ffb300",
     money:200,
-    inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value}
+    inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
     upgrades:{ luck:0, speed:0, reward:0 },
     generators:{ street_vendor:0, fence:0, smuggler:0, cartel:0, syndicate:0 },
     achievementsUnlocked:[],
     lastTick: Date.now(),
+    lastFreeCaseDate: null,
+    favorites: [], // array of inventory item uids
+    stickerBag: {}, // { stickerId: count } — owned, unapplied stickers
     stats:{
       casesOpened:0,
       knivesFound:0,
@@ -324,7 +399,10 @@ function defaultState(){
       rouletteWon:0,
       roulettePlayed:0,
       skinsSold:0,
-      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0 }
+      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0 },
+      crashesPlayed:0,
+      crashesWon:0,
+      stickersApplied:0
     }
   };
 }
@@ -345,6 +423,9 @@ function loadState(){
     merged.stats.rarityFound = Object.assign(base.stats.rarityFound, (parsed.stats&&parsed.stats.rarityFound)||{});
     merged.inventory = parsed.inventory || [];
     merged.achievementsUnlocked = parsed.achievementsUnlocked || [];
+    merged.favorites = parsed.favorites || [];
+    merged.stickerBag = Object.assign({}, parsed.stickerBag||{});
+    merged.lastFreeCaseDate = parsed.lastFreeCaseDate || null;
     return merged;
   }catch(e){
     console.error("Failed to load save", e);
@@ -408,6 +489,44 @@ function rewardMultiplier(){
   return 1 + STATE.upgrades.reward*0.12;
 }
 
+/* ============================================================
+   MARKET SIMULATION (fake fluctuating price per skin over time)
+   ============================================================ */
+// Purely cosmetic-ish random walk built from a few offset sine waves,
+// seeded per skinId so every copy of the same skin shares one "market
+// price" line, and sampled against real elapsed time so it drifts
+// slowly while the person is playing.
+function marketModifier(skinId, tOverrideSec){
+  const seed = hashStr(skinId);
+  const t = tOverrideSec!==undefined ? tOverrideSec : Date.now()/1000;
+  const a = Math.sin(t/42 + (seed%97))*0.06;
+  const b = Math.sin(t/17 + (seed%53))*0.04;
+  const c = Math.sin(t/91 + (seed%31))*0.05;
+  return 1 + a + b + c; // ranges roughly 0.85 - 1.15
+}
+function stickerBoost(item){
+  if(!item.stickers || !item.stickers.length) return 0;
+  return item.stickers.reduce((sum,id)=> sum + (STICKER_INDEX[id]? STICKER_INDEX[id].boost : 0), 0);
+}
+// The value actually used when a specific inventory item is sold or
+// displayed: base drop value, nudged by the live market wave, boosted
+// by any applied stickers/charms.
+function marketValue(item){
+  const withMarket = item.value * marketModifier(item.skinId);
+  const withStickers = withMarket * (1 + stickerBoost(item));
+  return Math.max(1, Math.round(withStickers));
+}
+function sparklineSeries(skinId, points){
+  points = points||24;
+  const now = Date.now()/1000;
+  const stepSec = 25; // each point represents a ~25s-old sample
+  const series = [];
+  for(let i=points-1;i>=0;i--){
+    series.push(marketModifier(skinId, now - i*stepSec));
+  }
+  return series;
+}
+
 function openAnimDuration(){
   const base = 4200;
   return Math.max(1200, base - STATE.upgrades.speed*280);
@@ -422,7 +541,11 @@ function addToInventory(skin){
     suffix: skin.suffix,
     rarity: skin.rarity,
     icon: skin.icon,
-    value: skin.value
+    value: skin.value,
+    float: Math.round(Math.random()*99999999)/100000000, // 0.00000000 - 0.99999999, wear value
+    stattrak: Math.random() < 0.10, // StatTrat-style variant, rolled once at drop time
+    pattern: Math.floor(Math.random()*1000), // pattern/paint seed index
+    stickers: [] // up to 3 applied sticker ids, see STICKER_DEFS
   };
   STATE.inventory.push(item);
   STATE.stats.rarityFound[skin.rarity] = (STATE.stats.rarityFound[skin.rarity]||0)+1;
@@ -560,6 +683,7 @@ function refreshActiveTab(tab){
   if(tab==="stats") renderStats();
   if(tab==="leaderboard") renderLeaderboard();
   if(tab==="profile") renderProfile();
+  if(tab==="crash"){ resizeCrashCanvas(); drawCrashGraph(); }
 }
 
 /* ============================================================
@@ -589,7 +713,18 @@ function rarityStripHTML(oddsBoost){
 
 function renderCases(){
   const grid = document.getElementById("casesGrid");
-  grid.innerHTML = CASES.map(c=>`
+  const freeReady = freeCaseAvailable();
+  const freeCard = `
+    <div class="case-card free-case" data-case="${FREE_CASE.id}" data-kind="free">
+      <span class="case-badge-free">Free</span>
+      <div class="case-icon-badge"><span class="case-icon">${FREE_CASE.icon}</span></div>
+      <div class="case-name">${FREE_CASE.name}</div>
+      <div class="case-countdown ${freeReady?"ready":""}">${freeReady? "Ready to open!" : "Resets in "+formatCountdown(msUntilNextDay())}</div>
+      ${rarityStripHTML(FREE_CASE.oddsBoost)}
+      <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${FREE_CASE.desc}</div>
+      <button class="btn primary open-case-btn" ${freeReady?"":"disabled"}>${freeReady?"Open Free Case":"Already Claimed Today"}</button>
+    </div>`;
+  grid.innerHTML = freeCard + CASES.map(c=>`
     <div class="case-card" data-case="${c.id}" data-kind="weapon">
       <div class="case-icon-badge"><span class="case-icon">${c.icon}</span></div>
       <div class="case-name">${c.name}</div>
@@ -612,18 +747,132 @@ function renderKnifeCases(){
     </div>
   `).join("");
 }
+function renderLimitedCases(){
+  const grid = document.getElementById("limitedGrid");
+  const c = todaysLimitedCase();
+  grid.innerHTML = `
+    <div class="case-card limited-case" data-case="${c.id}" data-kind="limited">
+      <span class="case-badge-limited">Contraband</span>
+      <div class="case-icon-badge"><span class="case-icon">${c.icon}</span></div>
+      <div class="case-name">${c.name}</div>
+      <div class="case-price">${formatMoney(c.price)}</div>
+      <div class="case-countdown">Rotates in ${formatCountdown(msUntilNextDay())}</div>
+      ${rarityStripHTML(c.oddsBoost)}
+      <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
+      <button class="btn primary open-case-btn">Open Case</button>
+    </div>`;
+}
 
+function caseDefById(caseId, kind){
+  if(kind==="knife") return KNIFE_CASES.find(c=>c.id===caseId);
+  if(kind==="free") return FREE_CASE;
+  if(kind==="limited") return LIMITED_CASES.find(c=>c.id===caseId) || todaysLimitedCase();
+  return CASES.find(c=>c.id===caseId);
+}
+
+function caseGridClickHandler(kind){
+  return e=>{
+    const btn = e.target.closest(".open-case-btn");
+    const card = e.target.closest(".case-card");
+    if(!card) return;
+    if(btn){
+      if(btn.disabled) return;
+      openCaseFlow(card.dataset.case, kind);
+    } else {
+      openCasePreview(card.dataset.case, kind);
+    }
+  };
+}
 document.getElementById("casesGrid").addEventListener("click", e=>{
-  if(e.target.classList.contains("open-case-btn")){
-    const card = e.target.closest(".case-card");
-    openCaseFlow(card.dataset.case, "weapon");
-  }
+  const card = e.target.closest(".case-card");
+  if(!card) return;
+  caseGridClickHandler(card.dataset.kind)(e);
 });
-document.getElementById("knivesGrid").addEventListener("click", e=>{
-  if(e.target.classList.contains("open-case-btn")){
-    const card = e.target.closest(".case-card");
-    openCaseFlow(card.dataset.case, "knife");
+document.getElementById("knivesGrid").addEventListener("click", caseGridClickHandler("knife"));
+document.getElementById("limitedGrid").addEventListener("click", caseGridClickHandler("limited"));
+
+/* ============================================================
+   CASE CONTENTS PREVIEW MODAL
+   ============================================================ */
+function computeCaseOdds(caseDef, kind){
+  // Mirrors the live weightedPickRarity math (including current Luck
+  // upgrades) so the preview always reflects the odds the player will
+  // actually get if they open right now.
+  if(kind==="knife"){
+    const exclusiveMult = caseDef.exclusiveChanceMult||1;
+    const exclusiveChance = 0.01 * exclusiveMult * (1+STATE.upgrades.luck*0.1);
+    return [
+      { rarity:"exclusive", pct:exclusiveChance*100 },
+      { rarity:"knife", pct:(1-exclusiveChance)*100 },
+    ];
   }
+  if(kind==="limited"){
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1);
+    const rest = 1 - cbChance;
+    const luckLevel = STATE.upgrades.luck;
+    const luckMult = 1 + luckLevel*0.18;
+    const weights = RARITIES.filter(r=>r.id!=="contraband").map((r,i)=>{
+      let w = r.weight;
+      if(i>=2) w = w * Math.pow(luckMult, i-1) * caseDef.oddsBoost;
+      return { id:r.id, w };
+    });
+    const total = weights.reduce((a,b)=>a+b.w,0);
+    const out = weights.map(w=>({ rarity:w.id, pct:(w.w/total)*rest*100 }));
+    out.push({ rarity:"contraband", pct:cbChance*100 });
+    return out;
+  }
+  // standard weapon case
+  const luckLevel = STATE.upgrades.luck;
+  const luckMult = 1 + luckLevel*0.18;
+  const weights = RARITIES.filter(r=>r.id!=="contraband").map((r,i)=>{
+    let w = r.weight;
+    if(i>=2) w = w * Math.pow(luckMult, i-1) * caseDef.oddsBoost;
+    return { id:r.id, w };
+  });
+  const total = weights.reduce((a,b)=>a+b.w,0);
+  return weights.map(w=>({ rarity:w.id, pct:(w.w/total)*100 })).filter(o=>o.pct>0.00001);
+}
+
+function openCasePreview(caseId, kind){
+  const caseDef = caseDefById(caseId, kind);
+  if(!caseDef) return;
+  const odds = computeCaseOdds(caseDef, kind).sort((a,b)=>RARITY_INDEX[b.rarity]-RARITY_INDEX[a.rarity]);
+  const content = document.getElementById("casePreviewContent");
+  content.innerHTML = `
+    <div class="preview-header">
+      <span class="preview-icon">${caseDef.icon}</span>
+      <div>
+        <div class="preview-title">${caseDef.name}</div>
+        <div style="color:var(--amber);font-family:var(--f-mono);font-weight:700;">${caseDef.price?formatMoney(caseDef.price):"FREE"}</div>
+      </div>
+    </div>
+    <div class="preview-desc">${caseDef.desc} Your current Luck upgrade is factored into these odds.</div>
+    ${odds.map(o=>{
+      const meta = rarityMeta(o.rarity);
+      const pool = allSkinsForRarity(o.rarity);
+      const sample = pool.slice(0, 24);
+      return `
+      <div class="preview-odds-row" data-rarity="${o.rarity}">
+        <span class="preview-odds-swatch" style="background:${meta.color}"></span>
+        <span class="preview-odds-label text-${meta.css}">${meta.label}</span>
+        <span class="preview-odds-pct">${o.pct<0.01 ? o.pct.toFixed(4) : o.pct.toFixed(2)}%</span>
+      </div>
+      <div class="preview-odds-pool">
+        ${sample.map(s=>`<span class="preview-pool-item"><span class="pi-icon">${buildSkinIcon(s)}</span>${s.name}</span>`).join("")}
+        ${pool.length>24? `<span class="preview-pool-item">+${pool.length-24} more…</span>` : ""}
+      </div>`;
+    }).join("")}
+  `;
+  content.querySelectorAll(".preview-odds-row").forEach(row=>{
+    row.addEventListener("click", ()=> row.classList.toggle("expanded"));
+  });
+  document.getElementById("casePreviewModal").classList.remove("hidden");
+}
+document.getElementById("closeCasePreviewBtn").addEventListener("click", ()=>{
+  document.getElementById("casePreviewModal").classList.add("hidden");
+});
+document.getElementById("casePreviewModal").addEventListener("click", e=>{
+  if(e.target.id==="casePreviewModal") document.getElementById("casePreviewModal").classList.add("hidden");
 });
 
 /* ============================================================
@@ -633,12 +882,14 @@ let isOpening = false;
 
 function openCaseFlow(caseId, kind){
   if(isOpening) return;
-  const caseDef = (kind==="knife"? KNIFE_CASES : CASES).find(c=>c.id===caseId);
+  const caseDef = caseDefById(caseId, kind);
   if(!caseDef) return;
+  if(kind==="free" && !freeCaseAvailable()){ toast("❌ Already claimed today's free case"); return; }
   if(STATE.money < caseDef.price){ toast("❌ Not enough money"); return; }
 
   STATE.money -= caseDef.price;
   STATE.stats.totalSpent += caseDef.price;
+  if(kind==="free") STATE.lastFreeCaseDate = todayDateStr();
   updateTopbar();
 
   // Determine result
@@ -651,6 +902,15 @@ function openCaseFlow(caseId, kind){
       resultSkin = pickSkinFromRarity("exclusive");
     } else {
       resultSkin = pickSkinFromRarity("knife");
+    }
+  } else if(kind==="limited"){
+    // the only path that can ever produce a Contraband-tier drop
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1);
+    if(Math.random() < cbChance){
+      resultSkin = pickSkinFromRarity("contraband");
+    } else {
+      const rarityId = weightedPickRarity(caseDef.oddsBoost, 0);
+      resultSkin = pickSkinFromRarity(rarityId==="contraband"?"exclusive":rarityId);
     }
   } else {
     const rarityId = weightedPickRarity(caseDef.oddsBoost, 0);
@@ -665,6 +925,7 @@ function openCaseFlow(caseId, kind){
     saveState(true);
     showResultCard(item);
     checkAchievements();
+    if(kind==="free") renderCases();
     isOpening = false;
   });
 }
@@ -834,12 +1095,23 @@ function getFilteredSortedInventory(){
 function skinCardHTML(item, opts){
   opts = opts||{};
   const meta = rarityMeta(item.rarity);
+  const isFav = STATE.favorites.includes(item.uid);
+  const mv = marketValue(item);
+  const delta = mv - item.value;
+  const deltaHTML = Math.abs(delta) >= 1 ?
+    `<span class="market-delta-badge ${delta>=0?"up":"down"}">${delta>=0?"▲":"▼"}${formatMoney(Math.abs(delta))}</span>` : "";
+  const stickerHTML = (item.stickers&&item.stickers.length) ?
+    `<span class="sticker-count-badge">${item.stickers.map(id=>STICKER_INDEX[id]?STICKER_INDEX[id].icon:"").join("")}</span>` : "";
+  const checkboxHTML = opts.bulkMode ?
+    `<input type="checkbox" class="bulk-checkbox" data-uid="${item.uid}" ${bulkSelection.has(item.uid)?"checked":""}>` : "";
   return `
-    <div class="skin-card rarity-${meta.css}" data-uid="${item.uid}">
+    <div class="skin-card rarity-${meta.css} ${opts.bulkMode?"bulk-mode":""} ${bulkSelection.has(item.uid)?"bulk-picked":""}" data-uid="${item.uid}">
+      ${checkboxHTML}
+      <span class="fav-star ${isFav?"active":""}" data-uid="${item.uid}" title="Favorite">★</span>
       <div class="skin-icon">${buildSkinIcon(item)}</div>
-      <div class="skin-name">${item.name}</div>
+      <div class="skin-name">${item.name}${item.stattrak?' <span class="text-industrial" title="StatTrak">™</span>':""}</div>
       <div class="skin-rarity text-${meta.css}">${meta.label}</div>
-      <div class="skin-value">${formatMoney(item.value)}</div>
+      <div class="skin-value">${formatMoney(mv)}${stickerHTML}${deltaHTML}</div>
       ${opts.sellable? `<button class="btn small danger sell-btn" data-uid="${item.uid}">Sell</button>` : ""}
     </div>
   `;
@@ -847,29 +1119,56 @@ function skinCardHTML(item, opts){
 
 function renderInventory(){
   const grid = document.getElementById("invGrid");
-  const list = getFilteredSortedInventory();
-  grid.innerHTML = list.map(it=>skinCardHTML(it,{sellable:true})).join("") || `<p style="color:var(--text-dim);">No items yet — open some cases!</p>`;
-  const totalValue = STATE.inventory.reduce((a,b)=>a+b.value,0);
+  let list = getFilteredSortedInventory();
+  if(document.getElementById("invFavOnly").checked){
+    list = list.filter(it=>STATE.favorites.includes(it.uid));
+  }
+  grid.innerHTML = list.map(it=>skinCardHTML(it,{sellable:!bulkMode, bulkMode})).join("") || `<p style="color:var(--text-dim);">No items yet — open some cases!</p>`;
+  const totalValue = STATE.inventory.reduce((a,b)=>a+marketValue(b),0);
   document.getElementById("invSummary").textContent =
-    `${STATE.inventory.length} items · Total value: ${formatMoney(totalValue)}`;
+    `${STATE.inventory.length} items · Total value: ${formatMoney(totalValue)} · ${STATE.favorites.length} favorited`;
+  updateBulkBar();
 }
 
 document.getElementById("invSearch").addEventListener("input", renderInventory);
 document.getElementById("invSort").addEventListener("change", renderInventory);
 document.getElementById("invFilter").addEventListener("change", renderInventory);
+document.getElementById("invFavOnly").addEventListener("change", renderInventory);
 
 document.getElementById("invGrid").addEventListener("click", e=>{
   if(e.target.classList.contains("sell-btn")){
     sellItem(e.target.dataset.uid);
+    return;
   }
+  if(e.target.classList.contains("fav-star")){
+    toggleFavorite(e.target.dataset.uid);
+    renderInventory();
+    return;
+  }
+  if(e.target.classList.contains("bulk-checkbox")){
+    const u = e.target.dataset.uid;
+    if(bulkSelection.has(u)) bulkSelection.delete(u); else bulkSelection.add(u);
+    renderInventory();
+    return;
+  }
+  const card = e.target.closest(".skin-card");
+  if(!card) return;
+  if(bulkMode){
+    const u = card.dataset.uid;
+    if(bulkSelection.has(u)) bulkSelection.delete(u); else bulkSelection.add(u);
+    renderInventory();
+    return;
+  }
+  openItemInspect(card.dataset.uid);
 });
 
 function sellItem(uidVal){
   const idx = STATE.inventory.findIndex(i=>i.uid===uidVal);
   if(idx===-1) return;
   const item = STATE.inventory[idx];
-  const sellValue = Math.round(item.value * 0.65 * rewardMultiplier());
+  const sellValue = Math.round(marketValue(item) * 0.65 * rewardMultiplier());
   STATE.inventory.splice(idx,1);
+  STATE.favorites = STATE.favorites.filter(u=>u!==uidVal);
   STATE.money += sellValue;
   STATE.stats.totalEarned += sellValue;
   STATE.stats.skinsSold++;
@@ -882,11 +1181,13 @@ function sellItem(uidVal){
 }
 
 document.getElementById("sellAllJunkBtn").addEventListener("click", ()=>{
-  const junk = STATE.inventory.filter(i=>i.rarity==="consumer");
-  if(!junk.length){ toast("No Consumer items to sell"); return; }
+  // Favorited/pinned items are excluded, even if Consumer grade.
+  const junk = STATE.inventory.filter(i=>i.rarity==="consumer" && !STATE.favorites.includes(i.uid));
+  if(!junk.length){ toast("No sellable Consumer items (favorites are excluded)"); return; }
   let total = 0;
-  junk.forEach(item=>{ total += Math.round(item.value*0.65*rewardMultiplier()); });
-  STATE.inventory = STATE.inventory.filter(i=>i.rarity!=="consumer");
+  junk.forEach(item=>{ total += Math.round(marketValue(item)*0.65*rewardMultiplier()); });
+  const junkUids = new Set(junk.map(i=>i.uid));
+  STATE.inventory = STATE.inventory.filter(i=>!junkUids.has(i.uid));
   STATE.money += total;
   STATE.stats.totalEarned += total;
   STATE.stats.skinsSold += junk.length;
@@ -896,6 +1197,266 @@ document.getElementById("sellAllJunkBtn").addEventListener("click", ()=>{
   renderInventory();
   checkAchievements();
   saveState(true);
+});
+
+/* ============================================================
+   FAVORITES / WISHLIST
+   ============================================================ */
+function toggleFavorite(uidVal){
+  const i = STATE.favorites.indexOf(uidVal);
+  if(i===-1) STATE.favorites.push(uidVal);
+  else STATE.favorites.splice(i,1);
+  saveState(true);
+}
+
+/* ============================================================
+   BULK SELECT / BULK SELL
+   ============================================================ */
+let bulkMode = false;
+let bulkSelection = new Set();
+
+document.getElementById("bulkModeBtn").addEventListener("click", ()=>{
+  bulkMode = !bulkMode;
+  if(!bulkMode) bulkSelection.clear();
+  document.getElementById("bulkModeBtn").classList.toggle("active", bulkMode);
+  document.getElementById("bulkModeBtn").textContent = bulkMode ? "✖️ Cancel Select" : "☑️ Select Multiple";
+  renderInventory();
+});
+
+document.getElementById("bulkClearBtn").addEventListener("click", ()=>{
+  bulkSelection.clear();
+  renderInventory();
+});
+
+document.getElementById("bulkSellBtn").addEventListener("click", ()=>{
+  if(!bulkSelection.size) return;
+  const items = STATE.inventory.filter(i=>bulkSelection.has(i.uid));
+  let total = 0;
+  items.forEach(item=>{ total += Math.round(marketValue(item)*0.65*rewardMultiplier()); });
+  STATE.inventory = STATE.inventory.filter(i=>!bulkSelection.has(i.uid));
+  STATE.favorites = STATE.favorites.filter(u=>!bulkSelection.has(u));
+  STATE.money += total;
+  STATE.stats.totalEarned += total;
+  STATE.stats.skinsSold += items.length;
+  toast(`💰 Sold ${items.length} items for ${formatMoney(total)}`);
+  sfx("buy");
+  bulkSelection.clear();
+  updateTopbar();
+  renderInventory();
+  checkAchievements();
+  saveState(true);
+});
+
+function updateBulkBar(){
+  const bar = document.getElementById("bulkBar");
+  if(!bulkMode || bulkSelection.size===0){
+    bar.classList.add("hidden");
+    if(!bulkMode) return;
+  } else {
+    bar.classList.remove("hidden");
+  }
+  const items = STATE.inventory.filter(i=>bulkSelection.has(i.uid));
+  const total = items.reduce((a,it)=>a+Math.round(marketValue(it)*0.65*rewardMultiplier()),0);
+  document.getElementById("bulkCount").textContent = `${bulkSelection.size} selected`;
+  document.getElementById("bulkTotal").textContent = bulkSelection.size ? `≈ ${formatMoney(total)}` : "";
+  document.getElementById("bulkSellBtn").disabled = bulkSelection.size===0;
+}
+
+/* ============================================================
+   ITEM INSPECTION VIEW
+   ============================================================ */
+const WEAR_BANDS = [
+  { max:0.07, label:"Factory New" },
+  { max:0.15, label:"Minimal Wear" },
+  { max:0.38, label:"Field-Tested" },
+  { max:0.45, label:"Well-Worn" },
+  { max:1.001, label:"Battle-Scarred" },
+];
+function wearLabel(float){
+  return (WEAR_BANDS.find(b=>float<=b.max) || WEAR_BANDS[WEAR_BANDS.length-1]).label;
+}
+function buildSparklineSVG(series){
+  const w = 300, h = 44;
+  const min = Math.min(...series), max = Math.max(...series);
+  const range = (max-min) || 0.01;
+  const pts = series.map((v,i)=>{
+    const x = (i/(series.length-1))*w;
+    const y = h - ((v-min)/range)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const rising = series[series.length-1] >= series[0];
+  const color = rising ? "#3ddc84" : "var(--crimson)";
+  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+let inspectTargetSlot = null;
+
+function openItemInspect(uidVal){
+  const item = STATE.inventory.find(i=>i.uid===uidVal);
+  if(!item) return;
+  inspectTargetSlot = null;
+  renderItemInspect(item);
+  document.getElementById("itemInspectModal").classList.remove("hidden");
+}
+
+function renderItemInspect(item){
+  const meta = rarityMeta(item.rarity);
+  const mv = marketValue(item);
+  const delta = mv - item.value;
+  const isFav = STATE.favorites.includes(item.uid);
+  const series = sparklineSeries(item.skinId);
+  const pctChange = ((series[series.length-1]-1)*100).toFixed(1);
+  const content = document.getElementById("itemInspectContent");
+  content.innerHTML = `
+    <div class="inspect-top rarity-${meta.css}" style="--ri-border:${meta.color}">
+      <div class="inspect-icon">${buildSkinIcon(item)}</div>
+      <div class="inspect-name">${item.name}</div>
+      <div class="inspect-rarity text-${meta.css}">${meta.label}</div>
+      ${item.stattrak? `<div class="inspect-stattrak">★ StatTrak™ Tracking Enabled</div>` : ""}
+      <div class="inspect-stat-grid">
+        <div class="inspect-stat">
+          <div class="lbl">Float / Wear</div>
+          <div class="val">${item.float.toFixed(8)}</div>
+          <div style="font-size:.7em;color:var(--text-dim);margin-top:2px;">${wearLabel(item.float)}</div>
+          <div class="inspect-float-bar"><div class="inspect-float-marker" style="left:${(item.float*100).toFixed(1)}%"></div></div>
+        </div>
+        <div class="inspect-stat">
+          <div class="lbl">Pattern Index</div>
+          <div class="val">#${item.pattern}</div>
+          <div style="font-size:.7em;color:var(--text-dim);margin-top:2px;">Seed derived, cosmetic only</div>
+        </div>
+      </div>
+      <div class="inspect-market">
+        <div class="lbl">Market Price (live, fluctuates)</div>
+        <div class="inspect-market-row">
+          <span class="inspect-market-price">${formatMoney(mv)}</span>
+          <span class="inspect-market-delta ${delta>=0?"up":"down"}">${delta>=0?"▲":"▼"} ${pctChange}% vs base</span>
+        </div>
+        ${buildSparklineSVG(series)}
+      </div>
+      <div class="inspect-stickers">
+        <div class="lbl">Stickers / Charms (boost sell value)</div>
+        <div class="sticker-slots">
+          ${[0,1,2].map(i=>{
+            const sid = item.stickers[i];
+            if(sid){
+              const s = STICKER_INDEX[sid];
+              return `<div class="sticker-slot filled" data-slot="${i}" data-action="remove">${s?s.icon:"?"}<span class="remove-x">✕</span></div>`;
+            }
+            return `<div class="sticker-slot" data-slot="${i}" data-action="pick">+</div>`;
+          }).join("")}
+        </div>
+        ${stickerBoost(item)>0? `<div class="sticker-boost-note">+${Math.round(stickerBoost(item)*100)}% sell value from applied stickers</div>` : ""}
+        <div id="stickerPickerArea"></div>
+      </div>
+      <div class="inspect-actions">
+        <button class="btn inspect-fav-btn ${isFav?"active":""}" id="inspectFavBtn">★ ${isFav?"Favorited":"Favorite"}</button>
+        <button class="btn danger" id="inspectSellBtn">Sell for ${formatMoney(Math.round(mv*0.65*rewardMultiplier()))}</button>
+      </div>
+    </div>
+  `;
+
+  content.querySelectorAll(".sticker-slot").forEach(slot=>{
+    slot.addEventListener("click", ()=>{
+      const idx = Number(slot.dataset.slot);
+      if(slot.dataset.action==="remove"){
+        const sid = item.stickers[idx];
+        item.stickers.splice(idx,1,undefined); // keep slot semantics simple: clear this slot
+        item.stickers = item.stickers.filter(s=>s!==undefined);
+        STATE.stickerBag[sid] = (STATE.stickerBag[sid]||0)+1;
+        saveState(true);
+        renderItemInspect(item);
+        renderInventory();
+        return;
+      }
+      // pick a sticker to apply into this slot
+      inspectTargetSlot = idx;
+      const owned = Object.keys(STATE.stickerBag).filter(id=>STATE.stickerBag[id]>0);
+      const picker = document.getElementById("stickerPickerArea");
+      if(!owned.length){
+        picker.innerHTML = `<div style="font-size:.75em;color:var(--text-dim);margin-top:8px;">No stickers owned yet — visit the Sticker Shop.</div>`;
+        return;
+      }
+      picker.innerHTML = `<div class="sticker-picker">${owned.map(id=>{
+        const s = STICKER_INDEX[id];
+        return `<div class="sticker-pick-item" data-apply="${id}">${s.icon} ${s.name} <span style="color:var(--teal)">+${Math.round(s.boost*100)}%</span> <span style="color:var(--text-faint)">(x${STATE.stickerBag[id]})</span></div>`;
+      }).join("")}</div>`;
+      picker.querySelectorAll("[data-apply]").forEach(pick=>{
+        pick.addEventListener("click", ()=>{
+          const id = pick.dataset.apply;
+          if(item.stickers.length>=3 && inspectTargetSlot===null) return;
+          if(item.stickers[inspectTargetSlot]) return; // slot already filled defensively
+          while(item.stickers.length <= inspectTargetSlot) item.stickers.push(undefined);
+          item.stickers[inspectTargetSlot] = id;
+          item.stickers = item.stickers.filter(s=>s!==undefined);
+          STATE.stickerBag[id]--;
+          STATE.stats.stickersApplied = (STATE.stats.stickersApplied||0)+1;
+          toast(`🎫 Applied ${STICKER_INDEX[id].name}`);
+          saveState(true);
+          renderItemInspect(item);
+          renderInventory();
+        });
+      });
+    });
+  });
+
+  document.getElementById("inspectFavBtn").addEventListener("click", ()=>{
+    toggleFavorite(item.uid);
+    renderItemInspect(item);
+    renderInventory();
+  });
+  document.getElementById("inspectSellBtn").addEventListener("click", ()=>{
+    document.getElementById("itemInspectModal").classList.add("hidden");
+    sellItem(item.uid);
+  });
+}
+
+document.getElementById("closeInspectBtn").addEventListener("click", ()=>{
+  document.getElementById("itemInspectModal").classList.add("hidden");
+});
+document.getElementById("itemInspectModal").addEventListener("click", e=>{
+  if(e.target.id==="itemInspectModal") document.getElementById("itemInspectModal").classList.add("hidden");
+});
+
+/* ============================================================
+   STICKER SHOP
+   ============================================================ */
+function renderStickerShop(){
+  const grid = document.getElementById("stickerShopGrid");
+  grid.innerHTML = STICKER_DEFS.map(s=>`
+    <div class="sticker-shop-card">
+      <div class="ss-icon">${s.icon}</div>
+      <div class="ss-name">${s.name}</div>
+      <div class="ss-boost">+${Math.round(s.boost*100)}% sell value</div>
+      <div class="ss-owned">Owned: ${STATE.stickerBag[s.id]||0}</div>
+      <button class="btn primary small buy-sticker-btn" data-id="${s.id}">Buy — ${formatMoney(s.cost)}</button>
+    </div>
+  `).join("");
+}
+document.getElementById("stickerShopBtn").addEventListener("click", ()=>{
+  renderStickerShop();
+  document.getElementById("stickerShopModal").classList.remove("hidden");
+});
+document.getElementById("closeStickerShopBtn").addEventListener("click", ()=>{
+  document.getElementById("stickerShopModal").classList.add("hidden");
+});
+document.getElementById("stickerShopModal").addEventListener("click", e=>{
+  if(e.target.id==="stickerShopModal"){ document.getElementById("stickerShopModal").classList.add("hidden"); return; }
+  if(e.target.classList.contains("buy-sticker-btn")){
+    const id = e.target.dataset.id;
+    const def = STICKER_INDEX[id];
+    if(STATE.money < def.cost){ toast("❌ Not enough money"); return; }
+    STATE.money -= def.cost;
+    STATE.stats.totalSpent += def.cost;
+    STATE.stickerBag[id] = (STATE.stickerBag[id]||0)+1;
+    sfx("buy");
+    toast(`🎫 Bought ${def.name}`);
+    updateTopbar();
+    renderStickerShop();
+    saveState(true);
+  }
 });
 
 /* ============================================================
@@ -1291,6 +1852,164 @@ function spinRoulette(color){
 }
 
 /* ============================================================
+   CRASH GAME
+   ============================================================ */
+const crashCanvas = document.getElementById("crashCanvas");
+const crashCtx = crashCanvas.getContext("2d");
+function resizeCrashCanvas(){
+  const rect = crashCanvas.parentElement.getBoundingClientRect();
+  crashCanvas.width = rect.width;
+  crashCanvas.height = rect.height;
+}
+window.addEventListener("resize", resizeCrashCanvas);
+
+let crashRunning = false;
+let crashCashedOut = false;
+let crashStartTime = 0;
+let crashPoint = 1;
+let crashBetAmount = 0;
+let crashAnimFrame = null;
+let crashPath = [];
+
+// classic crash-game curve: fast-ish exponential climb
+function crashMultiplierAt(elapsedSec){
+  return Math.exp(elapsedSec*0.17);
+}
+// standard house-edge crash-point distribution
+function generateCrashPoint(){
+  const houseEdge = 0.04;
+  const r = Math.random();
+  if(r < houseEdge) return 1.00;
+  let point = 0.99/(1-r);
+  point = Math.floor(point*100)/100;
+  return Math.max(1.00, Math.min(point, 500));
+}
+
+function drawCrashGraph(){
+  resizeCrashCanvas();
+  const w = crashCanvas.width, h = crashCanvas.height;
+  crashCtx.clearRect(0,0,w,h);
+  if(crashPath.length<2) return;
+  const maxT = Math.max(crashPath[crashPath.length-1].t*1.08, 1);
+  const maxM = Math.max(...crashPath.map(p=>p.m), 1.4) * 1.12;
+  crashCtx.beginPath();
+  crashPath.forEach((p,i)=>{
+    const x = (p.t/maxT)*w;
+    const y = h - (( p.m-1)/(maxM-1))*h;
+    if(i===0) crashCtx.moveTo(x,y); else crashCtx.lineTo(x,y);
+  });
+  const grad = crashCtx.createLinearGradient(0,0,w,0);
+  const col = crashCashedOut ? "#3ddc84" : "#f2a93b";
+  grad.addColorStop(0, col);
+  grad.addColorStop(1, crashRunning ? col : (crashCashedOut? "#3ddc84":"#ff4d5e"));
+  crashCtx.strokeStyle = grad;
+  crashCtx.lineWidth = 3;
+  crashCtx.lineJoin = "round";
+  crashCtx.stroke();
+  // fill under the curve for a bit of drama
+  const last = crashPath[crashPath.length-1];
+  crashCtx.lineTo((last.t/maxT)*w, h);
+  crashCtx.lineTo(0,h);
+  crashCtx.closePath();
+  crashCtx.fillStyle = col.replace(")", ",0.12)").replace("rgb","rgba");
+  crashCtx.globalAlpha = 0.14;
+  crashCtx.fillStyle = col;
+  crashCtx.fill();
+  crashCtx.globalAlpha = 1;
+}
+
+function updateCrashDisplay(m){
+  const el = document.getElementById("crashMultiplier");
+  el.textContent = m.toFixed(2)+"x";
+}
+
+function crashTick(now){
+  if(!crashRunning && !crashCashedOut) return;
+  const elapsed = (now - crashStartTime)/1000;
+  const m = Math.min(crashMultiplierAt(elapsed), crashPoint);
+  updateCrashDisplay(m);
+  crashPath.push({ t:elapsed, m });
+  drawCrashGraph();
+  if(m >= crashPoint){
+    endCrashRound();
+    return;
+  }
+  crashAnimFrame = requestAnimationFrame(crashTick);
+}
+
+function startCrash(){
+  if(crashRunning) return;
+  const betInput = document.getElementById("crashBet");
+  const bet = Math.max(1, Math.round(Number(betInput.value)||0));
+  if(STATE.money < bet){ toast("❌ Not enough money"); return; }
+  STATE.money -= bet;
+  STATE.stats.totalSpent += bet;
+  crashBetAmount = bet;
+  crashPoint = generateCrashPoint();
+  crashRunning = true;
+  crashCashedOut = false;
+  crashPath = [{t:0,m:1}];
+  crashStartTime = performance.now();
+  document.getElementById("crashStartBtn").disabled = true;
+  document.getElementById("crashCashoutBtn").disabled = false;
+  document.getElementById("crashMessage").textContent = "";
+  document.getElementById("crashMultiplier").className = "crash-multiplier";
+  STATE.stats.crashesPlayed++;
+  updateTopbar();
+  crashAnimFrame = requestAnimationFrame(crashTick);
+}
+
+function cashOutCrash(){
+  if(!crashRunning || crashCashedOut) return;
+  crashCashedOut = true;
+  const elapsed = (performance.now() - crashStartTime)/1000;
+  const m = Math.min(crashMultiplierAt(elapsed), crashPoint);
+  const payout = Math.round(crashBetAmount*m);
+  STATE.money += payout;
+  STATE.stats.totalEarned += payout - crashBetAmount;
+  STATE.stats.crashesWon++;
+  document.getElementById("crashMultiplier").classList.add("cashed");
+  document.getElementById("crashMessage").textContent = `💸 Cashed out at ${m.toFixed(2)}x for ${formatMoney(payout)}`;
+  document.getElementById("crashCashoutBtn").disabled = true;
+  sfx("win");
+  burstParticles(window.innerWidth/2, window.innerHeight/2, "#3ddc84", 40);
+  addCrashHistory(m, true);
+  updateTopbar();
+  checkAchievements();
+  saveState(true);
+}
+
+function endCrashRound(){
+  crashRunning = false;
+  cancelAnimationFrame(crashAnimFrame);
+  document.getElementById("crashStartBtn").disabled = false;
+  document.getElementById("crashCashoutBtn").disabled = true;
+  if(!crashCashedOut){
+    document.getElementById("crashMultiplier").classList.add("crashed");
+    document.getElementById("crashMessage").textContent = `💥 Crashed at ${crashPoint.toFixed(2)}x — you lost ${formatMoney(crashBetAmount)}`;
+    sfx("lose");
+    addCrashHistory(crashPoint, false);
+    checkAchievements();
+    saveState(true);
+  }
+  crashCashedOut = false;
+  updateTopbar();
+}
+
+function addCrashHistory(m, win){
+  const hist = document.getElementById("crashHistory");
+  const chip = document.createElement("div");
+  chip.className = "crash-history-chip " + (win?"win":"loss");
+  chip.textContent = m.toFixed(2)+"x";
+  hist.insertBefore(chip, hist.firstChild);
+  while(hist.children.length>12) hist.removeChild(hist.lastChild);
+}
+
+document.getElementById("crashStartBtn").addEventListener("click", startCrash);
+document.getElementById("crashCashoutBtn").addEventListener("click", cashOutCrash);
+resizeCrashCanvas();
+
+/* ============================================================
    PROFILE
    ============================================================ */
 function renderProfile(){
@@ -1384,6 +2103,7 @@ function renderStats(){
     ["🎰 Jackpots Won", `${s.jackpotsWon} / ${s.jackpotsPlayed}`],
     ["🪙 Coinflips Won", `${s.coinflipsWon} / ${s.coinflipsPlayed}`],
     ["🎡 Roulette Won", `${s.rouletteWon} / ${s.roulettePlayed}`],
+    ["📈 Crash Cashouts", `${s.crashesWon} / ${s.crashesPlayed}`],
     ["🏷️ Skins Sold", s.skinsSold],
     ["⭐ Best Drop", s.bestDrop ? s.bestDrop.name : "—"],
   ];
@@ -1427,6 +2147,7 @@ function renderLeaderboard(){
 function renderAll(){
   renderCases();
   renderKnifeCases();
+  renderLimitedCases();
   renderInventory();
   renderTradeup();
   renderUpgrades();
@@ -1444,6 +2165,15 @@ function init(){
   saveState(true);
 }
 init();
+
+// keep the daily-free-case / limited-case countdowns ticking while
+// the Cases tab is visible
+setInterval(()=>{
+  if(document.getElementById("tab-cases").classList.contains("active")){
+    renderCases();
+    renderLimitedCases();
+  }
+}, 1000);
 
 // autosave every 15s
 setInterval(()=>saveState(true), 15000);
