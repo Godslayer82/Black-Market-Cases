@@ -160,6 +160,13 @@ h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;}
 .achievements-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
 .stats-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));}
 
+.prestige-action-wrap{
+  margin-top:20px;padding:20px 22px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--radius-lg);max-width:480px;text-align:center;
+}
+.prestige-estimate{font-family:var(--f-mono);font-size:.92em;color:var(--text-dim);margin-bottom:14px;line-height:1.5;}
+.prestige-estimate strong{color:var(--amber);}
+
 /* ============================================================
    CASE CARDS
    ============================================================ */

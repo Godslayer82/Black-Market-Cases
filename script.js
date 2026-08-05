@@ -343,6 +343,11 @@ const GENERATOR_DEFS = {
   smuggler:      { name:"Smuggler Ring", icon:"🚚", baseCost:3000, growth:1.17, baseIncome:25 },
   cartel:        { name:"Cartel Operation", icon:"🏭", baseCost:20000,growth:1.18, baseIncome:150 },
   syndicate:     { name:"Global Syndicate", icon:"🌐", baseCost:150000,growth:1.20, baseIncome:900 },
+  offshore_bank: { name:"Offshore Bank", icon:"🏦", baseCost:1200000, growth:1.21, baseIncome:7000 },
+  private_army:  { name:"Private Army", icon:"⚔️", baseCost:9000000, growth:1.22, baseIncome:50000 },
+  black_exchange:{ name:"Black Exchange", icon:"🪙", baseCost:70000000, growth:1.23, baseIncome:340000 },
+  shadow_corp:   { name:"Shadow Corporation", icon:"🏢", baseCost:550000000, growth:1.24, baseIncome:2400000 },
+  global_monopoly:{ name:"Global Monopoly", icon:"🌍", baseCost:4500000000, growth:1.25, baseIncome:18000000 },
 };
 
 /* ---------------- ACHIEVEMENTS ---------------- */
@@ -355,15 +360,22 @@ const ACHIEVEMENT_DEFS = [
   { id:"first_exclusive", icon:"👑", name:"Jackpot Legend", desc:"Unbox an Exclusive item.", check:s=>s.stats.rarityFound.exclusive>=1 },
   { id:"rich_1k", icon:"💰", name:"Getting By", desc:"Earn a total of $1,000.", check:s=>s.stats.totalEarned>=1000 },
   { id:"rich_100k", icon:"💰", name:"Kingpin", desc:"Earn a total of $100,000.", check:s=>s.stats.totalEarned>=100000 },
+  { id:"rich_1m", icon:"💵", name:"Mogul", desc:"Earn a total of $1,000,000.", check:s=>s.stats.totalEarned>=1000000 },
+  { id:"rich_100m", icon:"💵", name:"Tycoon", desc:"Earn a total of $100,000,000.", check:s=>s.stats.totalEarned>=100000000 },
+  { id:"rich_1b", icon:"🏦", name:"Billionaire", desc:"Earn a total of $1,000,000,000.", check:s=>s.stats.totalEarned>=1000000000 },
+  { id:"rich_1t", icon:"🌍", name:"Trillion-Dollar Empire", desc:"Earn a total of $1,000,000,000,000.", check:s=>s.stats.totalEarned>=1000000000000 },
   { id:"first_tradeup", icon:"🔄", name:"Upgrader", desc:"Complete a trade-up contract.", check:s=>s.stats.tradeUps>=1 },
   { id:"first_jackpot", icon:"🎰", name:"High Roller", desc:"Win a jackpot round.", check:s=>s.stats.jackpotsWon>=1 },
-  { id:"gen_owner", icon:"🏭", name:"Investor", desc:"Buy your first generator.", check:s=>Object.values(s.generators).some(g=>g.level>0) },
+  { id:"gen_owner", icon:"🏭", name:"Investor", desc:"Buy your first generator.", check:s=>Object.values(s.generators).some(lvl=>lvl>0) },
   { id:"inv_50", icon:"🎒", name:"Collector", desc:"Hold 50 items in your inventory.", check:s=>s.inventory.length>=50 },
   { id:"first_contraband", icon:"☠️", name:"Off The Books", desc:"Unbox a Contraband item.", check:s=>(s.stats.rarityFound.contraband||0)>=1 },
   { id:"first_free_case", icon:"🎁", name:"On The House", desc:"Claim your first Daily Free Case.", check:s=>!!s.lastFreeCaseDate },
   { id:"first_favorite", icon:"⭐", name:"Pinned", desc:"Favorite an item to protect it from Sell All.", check:s=>s.favorites.length>=1 },
   { id:"first_sticker", icon:"🎫", name:"Customized", desc:"Apply a sticker or charm to a weapon.", check:s=>(s.stats.stickersApplied||0)>=1 },
   { id:"first_crash_win", icon:"📈", name:"Cashed Out", desc:"Win a round of Crash.", check:s=>s.stats.crashesWon>=1 },
+  { id:"prestige_1", icon:"👑", name:"Reborn", desc:"Retire and prestige for the first time.", check:s=>s.prestige.count>=1 },
+  { id:"prestige_5", icon:"👑", name:"Serial Retiree", desc:"Prestige 5 times.", check:s=>s.prestige.count>=5 },
+  { id:"prestige_25", icon:"👑", name:"Empire Builder", desc:"Prestige 25 times.", check:s=>s.prestige.count>=25 },
 ];
 
 /* ============================================================
@@ -377,7 +389,9 @@ function defaultState(){
     money:200,
     inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
     upgrades:{ luck:0, speed:0, reward:0 },
-    generators:{ street_vendor:0, fence:0, smuggler:0, cartel:0, syndicate:0 },
+    generators:{ street_vendor:0, fence:0, smuggler:0, cartel:0, syndicate:0,
+      offshore_bank:0, private_army:0, black_exchange:0, shadow_corp:0, global_monopoly:0 },
+    prestige:{ points:0, count:0 },
     achievementsUnlocked:[],
     lastTick: Date.now(),
     lastFreeCaseDate: null,
@@ -413,11 +427,12 @@ let STATE = loadState();
 // survive future field additions without wiping unrelated save data.
 function mergeStateWithDefaults(parsed){
   const base = defaultState();
-  const merged = Object.assign(base, parsed);
-  merged.upgrades = Object.assign(base.upgrades, parsed.upgrades||{});
-  merged.generators = Object.assign(base.generators, parsed.generators||{});
-  merged.stats = Object.assign(base.stats, parsed.stats||{});
-  merged.stats.rarityFound = Object.assign(base.stats.rarityFound, (parsed.stats&&parsed.stats.rarityFound)||{});
+  const merged = Object.assign({}, base, parsed);
+  merged.upgrades = Object.assign({}, base.upgrades, parsed.upgrades||{});
+  merged.generators = Object.assign({}, base.generators, parsed.generators||{});
+  merged.prestige = Object.assign({}, base.prestige, parsed.prestige||{});
+  merged.stats = Object.assign({}, base.stats, parsed.stats||{});
+  merged.stats.rarityFound = Object.assign({}, base.stats.rarityFound, (parsed.stats&&parsed.stats.rarityFound)||{});
   merged.inventory = parsed.inventory || [];
   merged.achievementsUnlocked = parsed.achievementsUnlocked || [];
   merged.favorites = parsed.favorites || [];
@@ -509,9 +524,19 @@ window.getPublicProfileSnapshot = function(){
    ============================================================ */
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 
+const MONEY_SUFFIXES = ["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc"];
 function formatMoney(n){
-  n = Math.round(n*100)/100;
-  return "$" + n.toLocaleString(undefined,{maximumFractionDigits:2});
+  const sign = n<0 ? "-" : "";
+  n = Math.abs(n);
+  if(n < 1000000){
+    n = Math.round(n*100)/100;
+    return sign + "$" + n.toLocaleString(undefined,{maximumFractionDigits:2});
+  }
+  let tier = Math.floor(Math.log10(n)/3);
+  tier = Math.min(tier, MONEY_SUFFIXES.length-1);
+  const scaled = n / Math.pow(1000, tier);
+  const decimals = scaled<10 ? 2 : scaled<100 ? 1 : 0;
+  return sign + "$" + scaled.toFixed(decimals) + MONEY_SUFFIXES[tier];
 }
 
 function rarityMeta(id){ return RARITIES[RARITY_INDEX[id]]; }
@@ -546,8 +571,75 @@ function pickSkinFromRarity(rarityId){
 }
 
 function rewardMultiplier(){
-  return 1 + STATE.upgrades.reward*0.12;
+  return (1 + STATE.upgrades.reward*0.12) * prestigeMultiplier();
 }
+
+/* ============================================================
+   PRESTIGE
+   ============================================================ */
+const PRESTIGE_MIN_NET_WORTH = 50000;
+
+function netWorth(){
+  const invValue = STATE.inventory.reduce((a,b)=>a+b.value,0);
+  return STATE.money + invValue;
+}
+function prestigePointsForNetWorth(nw){
+  return Math.floor(Math.sqrt(Math.max(0,nw)/10000));
+}
+function prestigeMultiplier(){
+  return 1 + STATE.prestige.points*0.02;
+}
+
+function renderPrestige(){
+  const nw = netWorth();
+  const gain = prestigePointsForNetWorth(nw);
+  const grid = document.getElementById("prestigeStatsGrid");
+  grid.innerHTML = [
+    ["Prestige Points", STATE.prestige.points],
+    ["Permanent Bonus", `+${Math.round((prestigeMultiplier()-1)*100)}%`],
+    ["Times Retired", STATE.prestige.count],
+    ["Current Net Worth", formatMoney(nw)],
+  ].map(([lbl,val])=>`<div class="stat-card"><div class="val">${val}</div><div class="lbl">${lbl}</div></div>`).join("");
+
+  const estimate = document.getElementById("prestigeEstimate");
+  const btn = document.getElementById("prestigeBtn");
+  if(nw < PRESTIGE_MIN_NET_WORTH){
+    estimate.innerHTML = `Reach <strong>${formatMoney(PRESTIGE_MIN_NET_WORTH)}</strong> net worth to unlock your first retirement.`;
+    btn.disabled = true;
+  } else {
+    estimate.innerHTML = `Retiring now earns <strong>+${gain} Prestige Points</strong> — a permanent <strong>+${gain*2}%</strong> boost to all future income and sell prices.`;
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("prestigeBtn").addEventListener("click", ()=>{
+  const nw = netWorth();
+  if(nw < PRESTIGE_MIN_NET_WORTH){ toast("❌ Not enough net worth yet"); return; }
+  const gain = prestigePointsForNetWorth(nw);
+  if(!confirm(`Retire with ${formatMoney(nw)} net worth for +${gain} Prestige Points (a permanent +${gain*2}% boost to all future income and sell prices)?\n\nThis resets your money, inventory, generators and upgrades. Achievements and stats are kept forever.`)) return;
+
+  const fresh = defaultState();
+  STATE.prestige.points += gain;
+  STATE.prestige.count += 1;
+  STATE.money = fresh.money;
+  STATE.inventory = [];
+  STATE.generators = fresh.generators;
+  STATE.upgrades = fresh.upgrades;
+  STATE.favorites = [];
+  STATE.pinned = [];
+  STATE.stickerBag = {};
+
+  toast(`👑 Retired! +${gain} Prestige Points — permanent +${gain*2}% to income & sell prices`);
+  sfx("win");
+  burstParticles(window.innerWidth/2, window.innerHeight/2, "#f2a93b", 100);
+  checkAchievements();
+  renderAll();
+  updateTopbar();
+  saveState(true);
+  if(window.CloudSync && typeof window.CloudSync.forceSyncNow==="function"){
+    window.CloudSync.forceSyncNow();
+  }
+});
 
 /* ============================================================
    MARKET SIMULATION (fake fluctuating price per skin over time)
@@ -740,6 +832,7 @@ function refreshActiveTab(tab){
   if(tab==="tradeup") renderTradeup();
   if(tab==="upgrades") renderUpgrades();
   if(tab==="generators") renderGenerators();
+  if(tab==="prestige") renderPrestige();
   if(tab==="stats") renderStats();
   if(tab==="leaderboard") renderLeaderboard();
   if(tab==="profile") renderProfile();
@@ -1790,12 +1883,17 @@ document.getElementById("jackpotJoinBtn").addEventListener("click", ()=>{
   STATE.stats.totalSpent += bet;
   updateTopbar();
 
-  // build entrants: user + 3 random bots with random wagers
+  // build entrants: user + 1-3 random bots with random wagers.
+  // Bot wagers are centered on the player's own bet (0.5x-1.5x, avg
+  // 1.0x) rather than skewed upward — win chance is your share of the
+  // pot, so keeping bot bets from systematically outweighing yours
+  // keeps this a fair, genuinely winnable game instead of stacking
+  // the odds against the player by design.
   const entrants = [{ name: STATE.username, bet, isUser:true }];
-  const botCount = 3;
+  const botCount = 1 + Math.floor(Math.random()*3); // 1-3 bots
   const usedBots = [...JACKPOT_BOTS].sort(()=>Math.random()-0.5).slice(0,botCount);
   usedBots.forEach(name=>{
-    entrants.push({ name, bet: Math.round(bet*(0.4+Math.random()*1.8)), isUser:false });
+    entrants.push({ name, bet: Math.max(1, Math.round(bet*(0.5+Math.random()*1.0))), isUser:false });
   });
 
   const totalPot = entrants.reduce((a,b)=>a+b.bet,0);
@@ -2381,6 +2479,7 @@ function renderAll(){
   renderTradeup();
   renderUpgrades();
   renderGenerators();
+  renderPrestige();
   renderProfile();
   renderStats();
   renderLeaderboard();
