@@ -35,6 +35,7 @@
       <button class="tab-btn" data-tab="jackpot"><span class="ti">🎰</span>Jackpot</button>
       <button class="tab-btn" data-tab="coinflip"><span class="ti">🪙</span>Coinflip</button>
       <button class="tab-btn" data-tab="roulette"><span class="ti">🎡</span>Roulette</button>
+      <button class="tab-btn" data-tab="crash"><span class="ti">📈</span>Crash</button>
 
       <div class="nav-group-label">You</div>
       <button class="tab-btn" data-tab="profile"><span class="ti">👤</span>Profile</button>
@@ -69,9 +70,20 @@
   <!-- CASES -->
   <section class="panel active" id="tab-cases">
     <h2>Weapon Cases</h2>
-    <p class="sub">Open a case for a chance at rare skins. Odds improve with Luck upgrades.</p>
+    <p class="sub">Open a case for a chance at rare skins. Odds improve with Luck upgrades. Click a case to preview its drop pool before buying.</p>
     <div class="grid cases-grid" id="casesGrid"></div>
+    <h2 class="section-heading-limited">🔥 Limited-Time</h2>
+    <p class="sub">Rotates daily. The only place <span class="text-contraband">Contraband</span> tier can drop.</p>
+    <div class="grid cases-grid" id="limitedGrid"></div>
   </section>
+
+  <!-- CASE PREVIEW MODAL -->
+  <div id="casePreviewModal" class="modal-overlay hidden">
+    <div class="modal-box preview-box">
+      <button class="modal-close" id="closeCasePreviewBtn">✕</button>
+      <div id="casePreviewContent"></div>
+    </div>
+  </div>
 
   <!-- KNIFE CRATES -->
   <section class="panel" id="tab-knives">
@@ -107,11 +119,38 @@
       <select id="invFilter">
         <option value="all">All Rarities</option>
       </select>
+      <label class="fav-filter-label"><input type="checkbox" id="invFavOnly"> ★ Favorites only</label>
+      <button id="stickerShopBtn" class="btn small">🎫 Sticker Shop</button>
+      <button id="bulkModeBtn" class="btn small">☑️ Select Multiple</button>
       <button id="sellAllJunkBtn" class="btn danger small">Sell All Consumer</button>
     </div>
     <div class="inv-summary" id="invSummary"></div>
+    <div class="bulk-bar hidden" id="bulkBar">
+      <span id="bulkCount">0 selected</span>
+      <span id="bulkTotal"></span>
+      <button id="bulkSellBtn" class="btn danger small" disabled>Sell Selected</button>
+      <button id="bulkClearBtn" class="btn small">Clear</button>
+    </div>
     <div class="grid inv-grid" id="invGrid"></div>
   </section>
+
+  <!-- ITEM INSPECT MODAL -->
+  <div id="itemInspectModal" class="modal-overlay hidden">
+    <div class="modal-box inspect-box">
+      <button class="modal-close" id="closeInspectBtn">✕</button>
+      <div id="itemInspectContent"></div>
+    </div>
+  </div>
+
+  <!-- STICKER SHOP MODAL -->
+  <div id="stickerShopModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <button class="modal-close" id="closeStickerShopBtn">✕</button>
+      <h3>🎫 Sticker &amp; Charm Shop</h3>
+      <p class="sub">Cosmetic add-ons. Apply up to 3 per weapon from an item's inspect view to boost its sell value.</p>
+      <div class="grid sticker-shop-grid" id="stickerShopGrid"></div>
+    </div>
+  </div>
 
   <!-- TRADE UP -->
   <section class="panel" id="tab-tradeup">
@@ -196,6 +235,25 @@
         <button class="btn roul-btn green" data-color="green">Green (14x)</button>
       </div>
       <div id="rouletteResult" class="game-result"></div>
+    </div>
+  </section>
+
+  <!-- CRASH -->
+  <section class="panel" id="tab-crash">
+    <h2>Crash</h2>
+    <p class="sub">Cash out before the multiplier crashes. Wait too long and you lose your wager.</p>
+    <div class="crash-wrap">
+      <div class="crash-graph-wrap">
+        <canvas id="crashCanvas"></canvas>
+        <div class="crash-multiplier" id="crashMultiplier">1.00x</div>
+        <div class="crash-message" id="crashMessage"></div>
+      </div>
+      <div class="bet-controls">
+        <input type="number" id="crashBet" min="1" value="10">
+        <button id="crashStartBtn" class="btn primary">Place Bet</button>
+        <button id="crashCashoutBtn" class="btn danger" disabled>Cash Out</button>
+      </div>
+      <div id="crashHistory" class="crash-history"></div>
     </div>
   </section>
 
