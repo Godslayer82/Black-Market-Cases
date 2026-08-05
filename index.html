@@ -12,7 +12,7 @@
 
 <div id="toastContainer" class="toast-container"></div>
 
-<!-- LOGIN GATE — shown on first visit until signed in or guest chosen -->
+<!-- LOGIN GATE — shown until the person signs in or creates an account. An account is required to play. -->
 <div id="loginGate" class="login-gate">
   <div class="login-gate-bg"></div>
   <div class="login-gate-card">
@@ -37,9 +37,7 @@
       <input type="password" id="gatePassword" placeholder="Password (min 6 characters)" autocomplete="current-password">
       <button id="gateSubmitBtn" class="btn primary gate-submit">Sign In</button>
       <a href="#" id="gateForgotLink" class="acct-forgot-link">Forgot password?</a>
-      <div class="gate-divider"><span>or</span></div>
-      <button id="gateGuestBtn" class="btn gate-guest-btn">Continue as Guest</button>
-      <p class="gate-note">Guests play locally on this device. Sign in anytime from the Profile tab to back up progress to the cloud.</p>
+      <p class="gate-note">An account is required to play — it backs up your progress to the cloud and lets you appear on the leaderboard with your own profile.</p>
     </div>
   </div>
 </div>
@@ -92,7 +90,7 @@
         </div>
         <div class="pill user-pill">
           <span class="pill-icon">👤</span>
-          <span id="usernameDisplay">Guest</span>
+          <span id="usernameDisplay">Player</span>
         </div>
       </div>
     </header>
@@ -297,15 +295,23 @@
       <div class="profile-fields">
         <label>Username</label>
         <input type="text" id="usernameInput" maxlength="16" placeholder="Enter username">
-        <label>Avatar Color</label>
+        <label>Avatar Image URL</label>
+        <input type="text" id="avatarUrlInput" placeholder="https://example.com/your-image.png">
+        <label>Avatar Color (used if no image URL is set)</label>
         <input type="color" id="avatarColorInput" value="#ffb300">
         <button id="saveProfileBtn" class="btn primary">Save Profile</button>
       </div>
     </div>
 
+    <div class="pinned-wrap">
+      <h3>📌 Pinned Items</h3>
+      <p class="sub">Choose up to 3 items to feature on your public profile — visible to anyone who clicks your name on the leaderboard.</p>
+      <div class="grid pinned-grid" id="profilePinnedGrid"></div>
+    </div>
+
     <div class="cloud-account-wrap">
       <h3>☁️ Cloud Account</h3>
-      <p class="sub" id="acctSub">Sign in to back up your progress and play from any device. Your local save keeps working even as a guest.</p>
+      <p class="sub" id="acctSub">Your account backs up your progress and powers your public leaderboard profile.</p>
       <div id="acctStatus" class="acct-status"></div>
 
       <div id="acctFormLoggedOut" class="acct-form">
@@ -351,12 +357,20 @@
   <!-- LEADERBOARD -->
   <section class="panel" id="tab-leaderboard">
     <h2>Leaderboard</h2>
-    <p class="sub">Ranked by total net worth (money + inventory value).</p>
+    <p class="sub">Ranked by total net worth (money + inventory value), across every player's account. Click a player to view their public profile.</p>
     <table class="leaderboard-table">
       <thead><tr><th>#</th><th>Player</th><th>Net Worth</th></tr></thead>
       <tbody id="leaderboardBody"></tbody>
     </table>
   </section>
+
+  <!-- PROFILE VIEW MODAL (viewing another player's public profile) -->
+  <div id="profileViewModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <button class="modal-close" id="closeProfileViewBtn">✕</button>
+      <div id="profileViewContent"></div>
+    </div>
+  </div>
 
     </main>
   </div>

@@ -373,8 +373,9 @@ const SAVE_KEY = "blackMarketCasesSave_v1";
 
 function defaultState(){
   return {
-    username:"Guest",
+    username:"Player",
     avatarColor:"#ffb300",
+    avatarUrl:"", // optional custom profile picture, direct image link
     money:200,
     inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
     upgrades:{ luck:0, speed:0, reward:0 },
@@ -383,6 +384,7 @@ function defaultState(){
     lastTick: Date.now(),
     lastFreeCaseDate: null,
     favorites: [], // array of inventory item uids
+    pinned: [], // array of inventory item uids featured on the public profile (max 3)
     stickerBag: {}, // { stickerId: count } — owned, unapplied stickers
     stats:{
       casesOpened:0,
@@ -421,6 +423,8 @@ function mergeStateWithDefaults(parsed){
   merged.inventory = parsed.inventory || [];
   merged.achievementsUnlocked = parsed.achievementsUnlocked || [];
   merged.favorites = parsed.favorites || [];
+  merged.pinned = parsed.pinned || [];
+  merged.avatarUrl = parsed.avatarUrl || "";
   merged.stickerBag = Object.assign({}, parsed.stickerBag||{});
   merged.lastFreeCaseDate = parsed.lastFreeCaseDate || null;
   return merged;
@@ -442,8 +446,8 @@ function saveState(silent){
   try{
     STATE.lastTick = Date.now();
     localStorage.setItem(SAVE_KEY, JSON.stringify(STATE));
-    // Cloud sync hook — populated by firebase-sync.js if/when the
-    // person is signed in. Safe no-op for guests / before it loads.
+    // Cloud sync hook — populated by firebase-sync.js once the
+    // person is signed in (accounts are required to play).
     if(window.CloudSync && typeof window.CloudSync.onLocalSave==="function"){
       window.CloudSync.onLocalSave();
     }
@@ -468,6 +472,29 @@ function applyImportedState(parsed, opts){
 }
 window.applyImportedState = applyImportedState;
 window.getSaveSnapshot = function(){ return STATE; };
+
+// Small, denormalized snapshot written to the PUBLIC leaderboard doc —
+// only what's needed to render the leaderboard and a read-only profile
+// view for other players. Never includes the full inventory, money,
+// generators, etc.
+window.getPublicProfileSnapshot = function(){
+  const invValue = STATE.inventory.reduce((a,b)=>a+b.value,0);
+  const pinnedItems = STATE.pinned
+    .map(u=>STATE.inventory.find(i=>i.uid===u))
+    .filter(Boolean)
+    .slice(0,3)
+    .map(it=>({
+      name: it.name, weapon: it.weapon, rarity: it.rarity,
+      value: it.value, stattrak: !!it.stattrak, icon: it.icon
+    }));
+  return {
+    username: STATE.username || "Player",
+    avatarColor: STATE.avatarColor || "#ffb300",
+    avatarUrl: STATE.avatarUrl || "",
+    netWorth: STATE.money + invValue,
+    pinnedItems
+  };
+};
 
 /* ============================================================
    UTILITIES
@@ -1121,6 +1148,7 @@ function skinCardHTML(item, opts){
   opts = opts||{};
   const meta = rarityMeta(item.rarity);
   const isFav = STATE.favorites.includes(item.uid);
+  const isPinned = STATE.pinned.includes(item.uid);
   const mv = marketValue(item);
   const delta = mv - item.value;
   const deltaHTML = Math.abs(delta) >= 1 ?
@@ -1129,15 +1157,33 @@ function skinCardHTML(item, opts){
     `<span class="sticker-count-badge">${item.stickers.map(id=>STICKER_INDEX[id]?STICKER_INDEX[id].icon:"").join("")}</span>` : "";
   const checkboxHTML = opts.bulkMode ?
     `<input type="checkbox" class="bulk-checkbox" data-uid="${item.uid}" ${bulkSelection.has(item.uid)?"checked":""}>` : "";
+  const pinHTML = opts.bulkMode ? "" :
+    `<span class="pin-star ${isPinned?"active":""}" data-uid="${item.uid}" title="Pin to public profile">📌</span>`;
   return `
     <div class="skin-card rarity-${meta.css} ${opts.bulkMode?"bulk-mode":""} ${bulkSelection.has(item.uid)?"bulk-picked":""}" data-uid="${item.uid}">
       ${checkboxHTML}
       <span class="fav-star ${isFav?"active":""}" data-uid="${item.uid}" title="Favorite">★</span>
+      ${pinHTML}
       <div class="skin-icon">${buildSkinIcon(item)}</div>
       <div class="skin-name">${item.name}${item.stattrak?' <span class="text-industrial" title="StatTrak">™</span>':""}</div>
       <div class="skin-rarity text-${meta.css}">${meta.label}</div>
       <div class="skin-value">${formatMoney(mv)}${stickerHTML}${deltaHTML}</div>
       ${opts.sellable? `<button class="btn small danger sell-btn" data-uid="${item.uid}">Sell</button>` : ""}
+    </div>
+  `;
+}
+
+// Read-only card for items pinned to ANOTHER player's public profile —
+// we only ever receive a small denormalized snapshot for those, not a
+// full inventory item, so this renders straight from that shape.
+function publicPinnedCardHTML(item){
+  const meta = rarityMeta(item.rarity);
+  return `
+    <div class="skin-card rarity-${meta.css}">
+      <div class="skin-icon">${buildSkinIcon(item)}</div>
+      <div class="skin-name">${item.name}${item.stattrak?' <span class="text-industrial" title="StatTrak">™</span>':""}</div>
+      <div class="skin-rarity text-${meta.css}">${meta.label}</div>
+      <div class="skin-value">${formatMoney(item.value)}</div>
     </div>
   `;
 }
@@ -1170,6 +1216,11 @@ document.getElementById("invGrid").addEventListener("click", e=>{
     renderInventory();
     return;
   }
+  if(e.target.classList.contains("pin-star")){
+    togglePin(e.target.dataset.uid);
+    renderInventory();
+    return;
+  }
   if(e.target.classList.contains("bulk-checkbox")){
     const u = e.target.dataset.uid;
     if(bulkSelection.has(u)) bulkSelection.delete(u); else bulkSelection.add(u);
@@ -1194,6 +1245,7 @@ function sellItem(uidVal){
   const sellValue = Math.round(marketValue(item) * 0.65 * rewardMultiplier());
   STATE.inventory.splice(idx,1);
   STATE.favorites = STATE.favorites.filter(u=>u!==uidVal);
+  STATE.pinned = STATE.pinned.filter(u=>u!==uidVal);
   STATE.money += sellValue;
   STATE.stats.totalEarned += sellValue;
   STATE.stats.skinsSold++;
@@ -1213,6 +1265,7 @@ document.getElementById("sellAllJunkBtn").addEventListener("click", ()=>{
   junk.forEach(item=>{ total += Math.round(marketValue(item)*0.65*rewardMultiplier()); });
   const junkUids = new Set(junk.map(i=>i.uid));
   STATE.inventory = STATE.inventory.filter(i=>!junkUids.has(i.uid));
+  STATE.pinned = STATE.pinned.filter(u=>!junkUids.has(u));
   STATE.money += total;
   STATE.stats.totalEarned += total;
   STATE.stats.skinsSold += junk.length;
@@ -1231,6 +1284,26 @@ function toggleFavorite(uidVal){
   const i = STATE.favorites.indexOf(uidVal);
   if(i===-1) STATE.favorites.push(uidVal);
   else STATE.favorites.splice(i,1);
+  saveState(true);
+}
+
+/* ============================================================
+   PINNED ITEMS (featured on public profile)
+   ============================================================ */
+const MAX_PINNED = 3;
+function togglePin(uidVal){
+  const i = STATE.pinned.indexOf(uidVal);
+  if(i!==-1){
+    STATE.pinned.splice(i,1);
+    saveState(true);
+    return;
+  }
+  if(STATE.pinned.length>=MAX_PINNED){
+    toast(`📌 You can only pin up to ${MAX_PINNED} items — unpin one first`);
+    return;
+  }
+  STATE.pinned.push(uidVal);
+  toast("📌 Pinned to your public profile");
   saveState(true);
 }
 
@@ -1260,6 +1333,7 @@ document.getElementById("bulkSellBtn").addEventListener("click", ()=>{
   items.forEach(item=>{ total += Math.round(marketValue(item)*0.65*rewardMultiplier()); });
   STATE.inventory = STATE.inventory.filter(i=>!bulkSelection.has(i.uid));
   STATE.favorites = STATE.favorites.filter(u=>!bulkSelection.has(u));
+  STATE.pinned = STATE.pinned.filter(u=>!bulkSelection.has(u));
   STATE.money += total;
   STATE.stats.totalEarned += total;
   STATE.stats.skinsSold += items.length;
@@ -1331,6 +1405,7 @@ function renderItemInspect(item){
   const mv = marketValue(item);
   const delta = mv - item.value;
   const isFav = STATE.favorites.includes(item.uid);
+  const isPinned = STATE.pinned.includes(item.uid);
   const series = sparklineSeries(item.skinId);
   const pctChange = ((series[series.length-1]-1)*100).toFixed(1);
   const content = document.getElementById("itemInspectContent");
@@ -1378,6 +1453,7 @@ function renderItemInspect(item){
       </div>
       <div class="inspect-actions">
         <button class="btn inspect-fav-btn ${isFav?"active":""}" id="inspectFavBtn">★ ${isFav?"Favorited":"Favorite"}</button>
+        <button class="btn inspect-fav-btn ${isPinned?"active":""}" id="inspectPinBtn">📌 ${isPinned?"Pinned":"Pin to Profile"}</button>
         <button class="btn danger" id="inspectSellBtn">Sell for ${formatMoney(Math.round(mv*0.65*rewardMultiplier()))}</button>
       </div>
     </div>
@@ -1429,6 +1505,11 @@ function renderItemInspect(item){
 
   document.getElementById("inspectFavBtn").addEventListener("click", ()=>{
     toggleFavorite(item.uid);
+    renderItemInspect(item);
+    renderInventory();
+  });
+  document.getElementById("inspectPinBtn").addEventListener("click", ()=>{
+    togglePin(item.uid);
     renderItemInspect(item);
     renderInventory();
   });
@@ -2039,21 +2120,55 @@ resizeCrashCanvas();
    ============================================================ */
 function renderProfile(){
   document.getElementById("usernameInput").value = STATE.username;
+  document.getElementById("avatarUrlInput").value = STATE.avatarUrl || "";
   document.getElementById("avatarColorInput").value = STATE.avatarColor;
   const avatar = document.getElementById("profileAvatar");
-  avatar.style.background = STATE.avatarColor;
-  avatar.textContent = (STATE.username||"?").charAt(0).toUpperCase();
+  if(STATE.avatarUrl){
+    avatar.style.background = STATE.avatarColor;
+    avatar.innerHTML = `<img src="${STATE.avatarUrl}" alt="" onerror="this.parentElement.textContent='${(STATE.username||"?").charAt(0).toUpperCase()}';">`;
+  } else {
+    avatar.style.background = STATE.avatarColor;
+    avatar.textContent = (STATE.username||"?").charAt(0).toUpperCase();
+  }
+  renderPinnedGrid();
   renderAchievements();
 }
 
+function renderPinnedGrid(){
+  const grid = document.getElementById("profilePinnedGrid");
+  const items = STATE.pinned.map(u=>STATE.inventory.find(i=>i.uid===u)).filter(Boolean);
+  grid.innerHTML = items.map(it=>skinCardHTML(it,{sellable:false})).join("");
+}
+document.getElementById("profilePinnedGrid").addEventListener("click", e=>{
+  if(e.target.classList.contains("pin-star")){
+    togglePin(e.target.dataset.uid);
+    renderPinnedGrid();
+    renderInventory();
+    return;
+  }
+  if(e.target.classList.contains("fav-star")){
+    toggleFavorite(e.target.dataset.uid);
+    renderPinnedGrid();
+    renderInventory();
+    return;
+  }
+  const card = e.target.closest(".skin-card");
+  if(card) openItemInspect(card.dataset.uid);
+});
+
 document.getElementById("saveProfileBtn").addEventListener("click", ()=>{
   const name = document.getElementById("usernameInput").value.trim();
-  STATE.username = name || "Guest";
+  STATE.username = name || "Player";
   STATE.avatarColor = document.getElementById("avatarColorInput").value;
+  const url = document.getElementById("avatarUrlInput").value.trim();
+  STATE.avatarUrl = /^https?:\/\//i.test(url) ? url : "";
   updateTopbar();
   renderProfile();
   toast("👤 Profile saved");
   saveState(true);
+  if(window.CloudSync && typeof window.CloudSync.forceSyncNow==="function"){
+    window.CloudSync.forceSyncNow();
+  }
 });
 
 document.getElementById("manualSaveBtn").addEventListener("click", ()=>saveState(false));
@@ -2166,33 +2281,83 @@ function renderStats(){
 }
 
 /* ============================================================
-   LEADERBOARD (local simulated + user)
+   LEADERBOARD (real players, from the public cloud leaderboard)
    ============================================================ */
-const FAKE_PLAYERS = [
-  { name:"ShadowFox", worth: 48210 },
-  { name:"VendettaX", worth: 122500 },
-  { name:"NightRaider", worth: 8340 },
-  { name:"GhostTrader", worth: 315000 },
-  { name:"ViperKing", worth: 67200 },
-  { name:"CrimsonAce", worth: 19850 },
-  { name:"LuckyDrops", worth: 2100 },
-  { name:"CaseKingpin", worth: 540000 },
-];
+// Small circular avatar (image if set, else initial-on-color) used in
+// the leaderboard rows and the profile-view modal header.
+function avatarCircleHTML(profile, size){
+  const cls = size==="large" ? "avatar-circle large" : "avatar-circle";
+  if(profile.avatarUrl){
+    return `<span class="${cls}" style="background:${profile.avatarColor||"#ffb300"}">
+      <img src="${profile.avatarUrl}" alt="" onerror="this.parentElement.textContent='${(profile.username||"?").charAt(0).toUpperCase()}';this.parentElement.style.background='${profile.avatarColor||"#ffb300"}';">
+    </span>`;
+  }
+  return `<span class="${cls}" style="background:${profile.avatarColor||"#ffb300"}">${(profile.username||"?").charAt(0).toUpperCase()}</span>`;
+}
 
-function renderLeaderboard(){
-  const invValue = STATE.inventory.reduce((a,b)=>a+b.value,0);
-  const userWorth = STATE.money + invValue;
-  const all = [...FAKE_PLAYERS, { name: STATE.username, worth: userWorth, isUser:true }];
-  all.sort((a,b)=>b.worth-a.worth);
+let leaderboardCache = [];
+
+async function renderLeaderboard(){
   const tbody = document.getElementById("leaderboardBody");
-  tbody.innerHTML = all.map((p,i)=>`
-    <tr class="${p.isUser?"you":""}">
+  if(!window.CloudSync || typeof window.CloudSync.fetchLeaderboard!=="function"){
+    tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">⚠️ Cloud connection not available — the leaderboard needs an internet connection.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">Loading leaderboard…</td></tr>`;
+  let entries;
+  try{
+    entries = await window.CloudSync.fetchLeaderboard(50);
+  }catch(e){
+    console.error("Leaderboard fetch failed", e);
+    tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">⚠️ Couldn't load the leaderboard — try again shortly.</td></tr>`;
+    return;
+  }
+  leaderboardCache = entries || [];
+  if(!leaderboardCache.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">No players yet — be the first to appear here!</td></tr>`;
+    return;
+  }
+  const myUid = window.CloudSync.getUser ? (window.CloudSync.getUser()||{}).uid : null;
+  tbody.innerHTML = leaderboardCache.map((p,i)=>`
+    <tr class="${p.uid===myUid?"you":""}" data-uid="${p.uid}">
       <td>#${i+1}</td>
-      <td>${p.isUser?"👤 ":"🤖 "}${p.name}</td>
-      <td>${formatMoney(p.worth)}</td>
+      <td><span class="lb-player-cell">${avatarCircleHTML(p)}${p.username||"Player"}</span></td>
+      <td>${formatMoney(p.netWorth||0)}</td>
     </tr>
   `).join("");
 }
+
+document.getElementById("leaderboardBody").addEventListener("click", e=>{
+  const row = e.target.closest("tr[data-uid]");
+  if(!row) return;
+  const profile = leaderboardCache.find(p=>p.uid===row.dataset.uid);
+  if(profile) openProfileViewModal(profile);
+});
+
+function openProfileViewModal(profile){
+  const content = document.getElementById("profileViewContent");
+  const pinnedItems = profile.pinnedItems || [];
+  content.innerHTML = `
+    <div class="profile-view-header">
+      ${avatarCircleHTML(profile, "large")}
+      <div>
+        <div class="profile-view-name">${profile.username||"Player"}</div>
+        <div class="profile-view-worth">💰 ${formatMoney(profile.netWorth||0)} net worth</div>
+      </div>
+    </div>
+    <h3>📌 Pinned Items</h3>
+    <div class="grid pinned-grid">
+      ${pinnedItems.length ? pinnedItems.map(publicPinnedCardHTML).join("") : ""}
+    </div>
+  `;
+  document.getElementById("profileViewModal").classList.remove("hidden");
+}
+document.getElementById("closeProfileViewBtn").addEventListener("click", ()=>{
+  document.getElementById("profileViewModal").classList.add("hidden");
+});
+document.getElementById("profileViewModal").addEventListener("click", e=>{
+  if(e.target.id==="profileViewModal") document.getElementById("profileViewModal").classList.add("hidden");
+});
 
 /* ============================================================
    INIT
@@ -2235,14 +2400,10 @@ window.addEventListener("beforeunload", ()=>saveState(true));
 /* ============================================================
    LOGIN GATE
    Pure-DOM open/close logic that never depends on firebase-sync.js
-   having loaded successfully — if that module is blocked, offline,
-   or slow, people can still always fall back to guest play instead
-   of being stuck behind a spinner forever. firebase-sync.js (when it
-   does load) calls these same functions to close the gate on a
-   restored/explicit sign-in.
+   having loaded successfully. An account is required to play — the
+   gate only closes once firebase-sync.js confirms a signed-in user
+   (see onAuthStateChanged -> window.closeLoginGate() there).
    ============================================================ */
-const GATE_GUEST_FLAG_KEY = "bmc_guest_mode";
-
 function closeLoginGate(){
   const root = document.getElementById("loginGate");
   if(root) root.classList.add("gate-closed");
@@ -2258,20 +2419,7 @@ function revealLoginGateForm(){
 window.closeLoginGate = closeLoginGate;
 window.revealLoginGateForm = revealLoginGateForm;
 
-(function initLoginGate(){
-  if(localStorage.getItem(GATE_GUEST_FLAG_KEY)==="1"){
-    // returning guest — skip the spinner/form entirely
-    closeLoginGate();
-  } else {
-    // safety net: if firebase-sync.js never loads (blocked CDN,
-    // offline, ad-blocker) don't leave anyone stuck on a spinner
-    setTimeout(revealLoginGateForm, 4000);
-  }
-  const guestBtn = document.getElementById("gateGuestBtn");
-  if(guestBtn){
-    guestBtn.addEventListener("click", ()=>{
-      localStorage.setItem(GATE_GUEST_FLAG_KEY, "1");
-      closeLoginGate();
-    });
-  }
-})();
+// safety net: if firebase-sync.js never loads (blocked CDN, offline,
+// ad-blocker) don't leave anyone stuck on a spinner forever — reveal
+// the sign-in form so they at least see what's wrong.
+setTimeout(revealLoginGateForm, 4000);

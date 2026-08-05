@@ -1,6 +1,9 @@
 /* ============================================================
    BLACK MARKET CASES — CLOUD SYNC
    Firebase Auth (email/password) + Firestore cloud save backend.
+   An account is REQUIRED to play — there is no guest mode. The
+   login gate (in script.js) only closes once onAuthStateChanged
+   below fires with a signed-in user.
 
    This file is loaded as a <script type="module"> AFTER script.js,
    so everything script.js defines at the top level (STATE, saveState,
@@ -13,7 +16,8 @@
    1. In the Firebase console, enable the "Email/Password" sign-in
       provider under Authentication → Sign-in method.
    2. Set Firestore security rules so people can only read/write
-      their OWN save document, e.g.:
+      their OWN private save document, and only write (never read
+      others') their own PUBLIC leaderboard/profile document:
 
         rules_version = '2';
         service cloud.firestore {
@@ -21,11 +25,20 @@
             match /users/{uid} {
               allow read, write: if request.auth != null && request.auth.uid == uid;
             }
+            match /leaderboard/{uid} {
+              allow read: if request.auth != null;
+              allow write: if request.auth != null && request.auth.uid == uid;
+            }
           }
         }
 
       Without rule #2, anyone could read or overwrite anyone else's
-      save data.
+      save data. The /leaderboard collection is intentionally public
+      (readable by any signed-in user) since it powers the leaderboard
+      and other players' profile views — it only ever contains the
+      small denormalized snapshot from getPublicProfileSnapshot()
+      (username, avatar, net worth, up to 3 pinned items), never the
+      full save.
    ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -43,7 +56,12 @@ import {
   doc,
   getDoc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -90,7 +108,6 @@ const gate = {
   submitBtn: $("gateSubmitBtn"),
   forgotLink:$("gateForgotLink"),
 };
-const GUEST_FLAG_KEY = "bmc_guest_mode";
 let gateMode = "signin"; // or "signup"
 
 function setGateMode(mode){
@@ -125,6 +142,9 @@ function setBusy(busy){
 function userDocRef(uid){
   return doc(db, "users", uid);
 }
+function leaderboardDocRef(uid){
+  return doc(db, "leaderboard", uid);
+}
 async function pushStateToCloud(uid){
   const snapshot = window.getSaveSnapshot ? window.getSaveSnapshot() : null;
   if(!snapshot) return;
@@ -140,6 +160,29 @@ async function pullStateFromCloud(uid){
   const data = snap.data();
   return data.state || null;
 }
+// Pushes the small PUBLIC snapshot (username, avatar, net worth, pinned
+// items) that powers the leaderboard and other players' profile views.
+// Kept separate from the private save doc above.
+async function pushPublicProfile(uid){
+  const publicSnapshot = window.getPublicProfileSnapshot ? window.getPublicProfileSnapshot() : null;
+  if(!publicSnapshot) return;
+  await setDoc(leaderboardDocRef(uid), {
+    ...publicSnapshot,
+    updatedAt: serverTimestamp()
+  });
+}
+async function pushAllToCloud(uid){
+  await Promise.all([pushStateToCloud(uid), pushPublicProfile(uid)]);
+}
+async function fetchLeaderboard(topN){
+  const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 50));
+  const snap = await getDocs(q);
+  const out = [];
+  snap.forEach(docSnap=>{
+    out.push({ uid: docSnap.id, ...docSnap.data() });
+  });
+  return out;
+}
 
 /* ---------------- throttled auto-sync ---------------- */
 let cloudPushTimer = null;
@@ -151,7 +194,7 @@ function scheduleCloudPush(){
   cloudPushTimer = setTimeout(async ()=>{
     cloudPushTimer = null;
     try{
-      await pushStateToCloud(auth.currentUser.uid);
+      await pushAllToCloud(auth.currentUser.uid);
       setStatus("☁️ Synced just now");
     }catch(e){
       console.error("Cloud sync failed", e);
@@ -165,7 +208,7 @@ async function forceSyncNow(){
   try{
     setBusy(true);
     setStatus("☁️ Syncing…");
-    await pushStateToCloud(auth.currentUser.uid);
+    await pushAllToCloud(auth.currentUser.uid);
     setStatus("☁️ Synced just now");
     if(window.toast) window.toast("☁️ Cloud save updated");
   }catch(e){
@@ -285,7 +328,6 @@ async function handleGateSubmit(){
     setGateStatus(gateMode==="signin" ? "Signing in…" : "Creating account…");
     if(gateMode==="signin") await performSignIn(email, password);
     else await performSignUp(email, password);
-    localStorage.removeItem(GUEST_FLAG_KEY);
     // onAuthStateChanged takes it from here and closes the gate
   }catch(e){
     console.error(e);
@@ -305,13 +347,6 @@ async function handleGateForgot(e){
     console.error(err);
     setGateStatus(friendlyAuthError(err), true);
   }
-}
-function handleGateGuest(){
-  // kept for completeness / potential future reuse — actual guest
-  // button wiring lives in script.js so it works even if this
-  // module fails to load
-  localStorage.setItem(GUEST_FLAG_KEY, "1");
-  window.closeLoginGate();
 }
 
 function friendlyAuthError(e){
@@ -341,7 +376,6 @@ onAuthStateChanged(auth, async (user)=>{
   renderLoggedIn(user);
   els.password && (els.password.value = "");
   gate.password && (gate.password.value = "");
-  localStorage.removeItem(GUEST_FLAG_KEY);
   window.closeLoginGate();
 
   const isExplicit = pendingExplicitAuth;
@@ -353,8 +387,8 @@ onAuthStateChanged(auth, async (user)=>{
 
     if(!cloudState){
       // Brand-new account, or an existing account with no cloud save
-      // yet — treat local progress (guest play, if any) as the seed.
-      await pushStateToCloud(user.uid);
+      // yet — seed the cloud from whatever local progress exists.
+      await pushAllToCloud(user.uid);
       setStatus("☁️ Cloud save created from your local progress");
       if(window.toast) window.toast("☁️ Cloud backup created");
       return;
@@ -370,10 +404,11 @@ onAuthStateChanged(auth, async (user)=>{
       );
       if(loadCloud){
         window.applyImportedState(cloudState, { silent:true });
+        await pushPublicProfile(user.uid);
         setStatus("☁️ Cloud save loaded");
         if(window.toast) window.toast("☁️ Cloud save loaded");
       } else {
-        await pushStateToCloud(user.uid);
+        await pushAllToCloud(user.uid);
         setStatus("☁️ Cloud save overwritten with this device's progress");
         if(window.toast) window.toast("☁️ Cloud save updated");
       }
@@ -406,6 +441,7 @@ gate.password && gate.password.addEventListener("keydown", e=>{ if(e.key==="Ente
 window.CloudSync = {
   onLocalSave: scheduleCloudPush,
   forceSyncNow: forceSyncNow,
+  fetchLeaderboard: fetchLeaderboard,
   getUser: ()=> auth.currentUser,
 };
 
