@@ -409,24 +409,29 @@ function defaultState(){
 
 let STATE = loadState();
 
+// Shared merge logic so both localStorage loads AND cloud/file imports
+// survive future field additions without wiping unrelated save data.
+function mergeStateWithDefaults(parsed){
+  const base = defaultState();
+  const merged = Object.assign(base, parsed);
+  merged.upgrades = Object.assign(base.upgrades, parsed.upgrades||{});
+  merged.generators = Object.assign(base.generators, parsed.generators||{});
+  merged.stats = Object.assign(base.stats, parsed.stats||{});
+  merged.stats.rarityFound = Object.assign(base.stats.rarityFound, (parsed.stats&&parsed.stats.rarityFound)||{});
+  merged.inventory = parsed.inventory || [];
+  merged.achievementsUnlocked = parsed.achievementsUnlocked || [];
+  merged.favorites = parsed.favorites || [];
+  merged.stickerBag = Object.assign({}, parsed.stickerBag||{});
+  merged.lastFreeCaseDate = parsed.lastFreeCaseDate || null;
+  return merged;
+}
+
 function loadState(){
   try{
     const raw = localStorage.getItem(SAVE_KEY);
     if(!raw) return defaultState();
     const parsed = JSON.parse(raw);
-    // merge with defaults to survive future field additions
-    const base = defaultState();
-    const merged = Object.assign(base, parsed);
-    merged.upgrades = Object.assign(base.upgrades, parsed.upgrades||{});
-    merged.generators = Object.assign(base.generators, parsed.generators||{});
-    merged.stats = Object.assign(base.stats, parsed.stats||{});
-    merged.stats.rarityFound = Object.assign(base.stats.rarityFound, (parsed.stats&&parsed.stats.rarityFound)||{});
-    merged.inventory = parsed.inventory || [];
-    merged.achievementsUnlocked = parsed.achievementsUnlocked || [];
-    merged.favorites = parsed.favorites || [];
-    merged.stickerBag = Object.assign({}, parsed.stickerBag||{});
-    merged.lastFreeCaseDate = parsed.lastFreeCaseDate || null;
-    return merged;
+    return mergeStateWithDefaults(parsed);
   }catch(e){
     console.error("Failed to load save", e);
     return defaultState();
@@ -437,12 +442,32 @@ function saveState(silent){
   try{
     STATE.lastTick = Date.now();
     localStorage.setItem(SAVE_KEY, JSON.stringify(STATE));
+    // Cloud sync hook — populated by firebase-sync.js if/when the
+    // person is signed in. Safe no-op for guests / before it loads.
+    if(window.CloudSync && typeof window.CloudSync.onLocalSave==="function"){
+      window.CloudSync.onLocalSave();
+    }
     if(!silent) toast("💾 Game saved");
   }catch(e){
     console.error("Failed to save", e);
     if(!silent) toast("⚠️ Save failed (storage full?)");
   }
 }
+
+// Replaces the live game state wholesale — used by both the local
+// "Import Save" file picker and cloud-load. Exposed on window so
+// firebase-sync.js (a separate module) can call it too.
+function applyImportedState(parsed, opts){
+  opts = opts||{};
+  STATE = mergeStateWithDefaults(parsed);
+  updateTopbar();
+  renderAll();
+  checkAchievements();
+  saveState(true);
+  if(!opts.silent) toast("📥 Save imported");
+}
+window.applyImportedState = applyImportedState;
+window.getSaveSnapshot = function(){ return STATE; };
 
 /* ============================================================
    UTILITIES
@@ -2044,12 +2069,40 @@ document.getElementById("exportSaveBtn").addEventListener("click", ()=>{
   toast("📤 Save exported");
 });
 
+document.getElementById("importSaveBtn").addEventListener("click", ()=>{
+  document.getElementById("importSaveInput").click();
+});
+document.getElementById("importSaveInput").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(typeof parsed !== "object" || parsed===null) throw new Error("bad format");
+      if(!confirm("Import this save? It will replace your CURRENT progress (local and cloud, if signed in). This cannot be undone.")) return;
+      applyImportedState(parsed);
+      // an explicit import should push to the cloud right away rather
+      // than waiting for the normal throttled auto-sync
+      if(window.CloudSync && typeof window.CloudSync.forceSyncNow==="function"){
+        window.CloudSync.forceSyncNow();
+      }
+    }catch(err){
+      console.error(err);
+      toast("⚠️ That file doesn't look like a valid save");
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
 document.getElementById("resetSaveBtn").addEventListener("click", ()=>{
   if(!confirm("Reset ALL progress? This cannot be undone.")) return;
   localStorage.removeItem(SAVE_KEY);
   STATE = defaultState();
   updateTopbar();
   renderAll();
+  saveState(true);
   toast("🗑️ Progress reset");
 });
 
