@@ -12,43 +12,59 @@
 
 <div id="toastContainer" class="toast-container"></div>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="brand-icon">📦</span>
-    <span class="brand-name">BLACK<span class="accent">MARKET</span>CASES</span>
-  </div>
-  <div class="stat-pills">
-    <div class="pill money-pill">
-      <span class="pill-icon">💰</span>
-      <span id="moneyDisplay">0</span>
-    </div>
-    <div class="pill">
-      <span class="pill-icon">👤</span>
-      <span id="usernameDisplay">Guest</span>
-    </div>
-    <div class="pill">
-      <span class="pill-icon">⚡</span>
-      <span id="incomeDisplay">0/s</span>
-    </div>
-  </div>
-</header>
+<div class="shell">
 
-<nav class="tabs" id="tabs">
-  <button class="tab-btn active" data-tab="cases">📦 Cases</button>
-  <button class="tab-btn" data-tab="knives">🗡️ Knife Crates</button>
-  <button class="tab-btn" data-tab="inventory">🎒 Inventory</button>
-  <button class="tab-btn" data-tab="tradeup">🔄 Trade-Up</button>
-  <button class="tab-btn" data-tab="upgrades">⚡ Upgrades</button>
-  <button class="tab-btn" data-tab="generators">🏭 Generators</button>
-  <button class="tab-btn" data-tab="jackpot">🎰 Jackpot</button>
-  <button class="tab-btn" data-tab="coinflip">🪙 Coinflip</button>
-  <button class="tab-btn" data-tab="roulette">🎡 Roulette</button>
-  <button class="tab-btn" data-tab="profile">👤 Profile</button>
-  <button class="tab-btn" data-tab="stats">📊 Stats</button>
-  <button class="tab-btn" data-tab="leaderboard">🏆 Leaderboard</button>
-</nav>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">▣</span>
+      <span class="brand-name">BLACK<span class="accent">MARKET</span></span>
+    </div>
 
-<main id="app">
+    <nav class="tabs" id="tabs">
+      <div class="nav-group-label">Unbox</div>
+      <button class="tab-btn active" data-tab="cases"><span class="ti">📦</span>Cases</button>
+      <button class="tab-btn" data-tab="knives"><span class="ti">🗡️</span>Knife Crates</button>
+      <button class="tab-btn" data-tab="inventory"><span class="ti">🎒</span>Inventory</button>
+      <button class="tab-btn" data-tab="tradeup"><span class="ti">🔄</span>Trade-Up</button>
+
+      <div class="nav-group-label">Grow</div>
+      <button class="tab-btn" data-tab="upgrades"><span class="ti">⚡</span>Upgrades</button>
+      <button class="tab-btn" data-tab="generators"><span class="ti">🏭</span>Generators</button>
+
+      <div class="nav-group-label">Wager</div>
+      <button class="tab-btn" data-tab="jackpot"><span class="ti">🎰</span>Jackpot</button>
+      <button class="tab-btn" data-tab="coinflip"><span class="ti">🪙</span>Coinflip</button>
+      <button class="tab-btn" data-tab="roulette"><span class="ti">🎡</span>Roulette</button>
+
+      <div class="nav-group-label">You</div>
+      <button class="tab-btn" data-tab="profile"><span class="ti">👤</span>Profile</button>
+      <button class="tab-btn" data-tab="stats"><span class="ti">📊</span>Stats</button>
+      <button class="tab-btn" data-tab="leaderboard"><span class="ti">🏆</span>Leaderboard</button>
+    </nav>
+  </aside>
+
+  <div class="main-col">
+
+    <header class="ticker">
+      <button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
+      <div class="ticker-spacer"></div>
+      <div class="stat-pills">
+        <div class="pill income-pill">
+          <span class="pill-icon">⚡</span>
+          <span id="incomeDisplay">$0/s</span>
+        </div>
+        <div class="pill money-pill">
+          <span class="pill-icon">💰</span>
+          <span id="moneyDisplay">$0</span>
+        </div>
+        <div class="pill user-pill">
+          <span class="pill-icon">👤</span>
+          <span id="usernameDisplay">Guest</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="app">
 
   <!-- CASES -->
   <section class="panel active" id="tab-cases">
@@ -214,7 +230,9 @@
     </table>
   </section>
 
-</main>
+    </main>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>

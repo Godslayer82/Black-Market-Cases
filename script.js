@@ -402,7 +402,16 @@ document.getElementById("tabs").addEventListener("click", e=>{
   document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
   sfx("click");
   refreshActiveTab(btn.dataset.tab);
+  document.querySelector(".shell").classList.remove("sidebar-open");
+  window.scrollTo({top:0, behavior:"smooth"});
 });
+
+const menuToggleBtn = document.getElementById("menuToggle");
+if(menuToggleBtn){
+  menuToggleBtn.addEventListener("click", ()=>{
+    document.querySelector(".shell").classList.toggle("sidebar-open");
+  });
+}
 
 function refreshActiveTab(tab){
   if(tab==="inventory") renderInventory();
@@ -537,35 +546,44 @@ function runReelAnimation(resultSkin, onDone){
   }
   items.push(resultSkin); // land on the real result
 
-  reel.innerHTML = items.map(s=>`
-    <div class="reel-item rarity-${rarityMeta(s.rarity).css}">
+  reel.innerHTML = items.map((s,i)=>`
+    <div class="reel-item rarity-${rarityMeta(s.rarity).css}" style="--ri-color:${rarityMeta(s.rarity).color}">
       <div class="ri-icon">${s.icon}</div>
       <div class="ri-name">${s.name}</div>
     </div>
   `).join("");
 
-  const itemWidth = 146; // width + margins
+  const itemWidth = 164; // width + margins, must match CSS .reel-item
   const wrapWidth = reel.parentElement.offsetWidth;
   const targetIndex = items.length - 1;
-  const finalOffset = (targetIndex*itemWidth) - (wrapWidth/2) + (itemWidth/2) + (Math.random()*60-30);
+  const finalOffset = (targetIndex*itemWidth) - (wrapWidth/2) + (itemWidth/2) + (Math.random()*50-25);
 
   reel.style.transition = "none";
   reel.style.transform = "translateX(0px)";
+  reel.classList.add("spinning");
   // force reflow
   void reel.offsetWidth;
 
   const duration = openAnimDuration();
-  reel.style.transition = `transform ${duration}ms cubic-bezier(.08,.65,.15,1)`;
+  reel.style.transition = `transform ${duration}ms cubic-bezier(.1,.7,.15,1)`;
   requestAnimationFrame(()=>{
     reel.style.transform = `translateX(-${finalOffset}px)`;
   });
 
   const tickInterval = setInterval(()=>sfx("spin"), 90);
+  // ease off the blur/motion styling as the reel decelerates near the end
+  setTimeout(()=>reel.classList.remove("spinning"), duration*0.7);
+  setTimeout(()=>reel.classList.add("settling"), duration*0.82);
 
   setTimeout(()=>{
     clearInterval(tickInterval);
+    reel.classList.remove("settling");
     const rIdx = RARITY_INDEX[resultSkin.rarity];
     sfx(rIdx>=6?"reveal_epic":rIdx>=4?"reveal_rare":"reveal_common");
+    if(rIdx>=5){
+      document.body.classList.add("screen-shake");
+      setTimeout(()=>document.body.classList.remove("screen-shake"), 400);
+    }
     onDone();
   }, duration+80);
 }
@@ -575,7 +593,9 @@ function showResultCard(item){
   const resultBox = document.getElementById("openResult");
   const card = document.getElementById("resultCard");
   const meta = rarityMeta(item.rarity);
-  card.className = "result-card rarity-"+meta.css;
+  const rIdx = RARITY_INDEX[item.rarity];
+  card.className = "result-card rarity-"+meta.css + (rIdx>=6? " holo":"");
+  card.style.setProperty("--ri-color", meta.color);
   card.innerHTML = `
     <div class="ri-icon">${item.icon}</div>
     <div class="ri-name">${item.name}</div>
