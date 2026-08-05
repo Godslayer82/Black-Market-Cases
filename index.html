@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Market Cases</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-icon">📦</span>
+    <span class="brand-name">BLACK<span class="accent">MARKET</span>CASES</span>
+  </div>
+  <div class="stat-pills">
+    <div class="pill money-pill">
+      <span class="pill-icon">💰</span>
+      <span id="moneyDisplay">0</span>
+    </div>
+    <div class="pill">
+      <span class="pill-icon">👤</span>
+      <span id="usernameDisplay">Guest</span>
+    </div>
+    <div class="pill">
+      <span class="pill-icon">⚡</span>
+      <span id="incomeDisplay">0/s</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="cases">📦 Cases</button>
+  <button class="tab-btn" data-tab="knives">🗡️ Knife Crates</button>
+  <button class="tab-btn" data-tab="inventory">🎒 Inventory</button>
+  <button class="tab-btn" data-tab="tradeup">🔄 Trade-Up</button>
+  <button class="tab-btn" data-tab="upgrades">⚡ Upgrades</button>
+  <button class="tab-btn" data-tab="generators">🏭 Generators</button>
+  <button class="tab-btn" data-tab="jackpot">🎰 Jackpot</button>
+  <button class="tab-btn" data-tab="coinflip">🪙 Coinflip</button>
+  <button class="tab-btn" data-tab="roulette">🎡 Roulette</button>
+  <button class="tab-btn" data-tab="profile">👤 Profile</button>
+  <button class="tab-btn" data-tab="stats">📊 Stats</button>
+  <button class="tab-btn" data-tab="leaderboard">🏆 Leaderboard</button>
+</nav>
+
+<main id="app">
+
+  <!-- CASES -->
+  <section class="panel active" id="tab-cases">
+    <h2>Weapon Cases</h2>
+    <p class="sub">Open a case for a chance at rare skins. Odds improve with Luck upgrades.</p>
+    <div class="grid cases-grid" id="casesGrid"></div>
+  </section>
+
+  <!-- KNIFE CRATES -->
+  <section class="panel" id="tab-knives">
+    <h2>Knife Crates</h2>
+    <p class="sub">Guaranteed Knife-tier or higher. Home of the Karambit, Butterfly, M9 Bayonet & more.</p>
+    <div class="grid cases-grid" id="knivesGrid"></div>
+  </section>
+
+  <!-- OPENING OVERLAY -->
+  <div id="openOverlay" class="open-overlay hidden">
+    <div class="reel-wrap">
+      <div class="reel-pointer"></div>
+      <div class="reel" id="reel"></div>
+    </div>
+    <div class="open-result hidden" id="openResult">
+      <div class="result-card" id="resultCard"></div>
+      <button id="closeResultBtn" class="btn primary">Continue</button>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <section class="panel" id="tab-inventory">
+    <h2>Inventory</h2>
+    <div class="inv-toolbar">
+      <input type="text" id="invSearch" placeholder="Search skins...">
+      <select id="invSort">
+        <option value="rarity-desc">Rarity: High → Low</option>
+        <option value="rarity-asc">Rarity: Low → High</option>
+        <option value="value-desc">Value: High → Low</option>
+        <option value="value-asc">Value: Low → High</option>
+        <option value="name">Name A-Z</option>
+      </select>
+      <select id="invFilter">
+        <option value="all">All Rarities</option>
+      </select>
+      <button id="sellAllJunkBtn" class="btn danger small">Sell All Consumer</button>
+    </div>
+    <div class="inv-summary" id="invSummary"></div>
+    <div class="grid inv-grid" id="invGrid"></div>
+  </section>
+
+  <!-- TRADE UP -->
+  <section class="panel" id="tab-tradeup">
+    <h2>Trade-Up Contracts</h2>
+    <p class="sub">Select 10 skins of the <strong>same rarity</strong> to trade for one random skin of the next rarity tier up.</p>
+    <div class="tradeup-bar">
+      <div id="tradeupCount">0 / 10 selected</div>
+      <button id="executeTradeupBtn" class="btn primary" disabled>Execute Trade-Up</button>
+      <button id="clearTradeupBtn" class="btn">Clear Selection</button>
+    </div>
+    <div class="grid inv-grid" id="tradeupGrid"></div>
+  </section>
+
+  <!-- UPGRADES -->
+  <section class="panel" id="tab-upgrades">
+    <h2>Upgrade Shop</h2>
+    <div class="grid upgrades-grid" id="upgradesGrid"></div>
+  </section>
+
+  <!-- GENERATORS -->
+  <section class="panel" id="tab-generators">
+    <h2>Money Generators</h2>
+    <p class="sub">Passive income, even while you're away (up to 8 hours offline progress).</p>
+    <div class="grid generators-grid" id="generatorsGrid"></div>
+  </section>
+
+  <!-- JACKPOT -->
+  <section class="panel" id="tab-jackpot">
+    <h2>Jackpot</h2>
+    <p class="sub">Wager against 3 rival bots. Win chance is proportional to your share of the pot.</p>
+    <div class="jackpot-wrap">
+      <div class="jackpot-wheel-wrap">
+        <div class="jackpot-wheel" id="jackpotWheel"></div>
+        <div class="jackpot-pointer"></div>
+      </div>
+      <div id="jackpotPot" class="jackpot-pot">Pot: $0</div>
+      <div class="jackpot-entries" id="jackpotEntries"></div>
+      <div class="bet-controls">
+        <input type="number" id="jackpotBet" min="1" value="10">
+        <button id="jackpotJoinBtn" class="btn primary">Join Jackpot</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- COINFLIP -->
+  <section class="panel" id="tab-coinflip">
+    <h2>Coinflip</h2>
+    <p class="sub">Pick a side. Win and double your wager.</p>
+    <div class="coinflip-wrap">
+      <div class="coin" id="coin">
+        <div class="coin-face coin-heads">H</div>
+        <div class="coin-face coin-tails">T</div>
+      </div>
+      <div class="bet-controls">
+        <input type="number" id="coinflipBet" min="1" value="10">
+        <button class="btn side-btn" data-side="heads">Heads</button>
+        <button class="btn side-btn" data-side="tails">Tails</button>
+      </div>
+      <div id="coinflipResult" class="game-result"></div>
+    </div>
+  </section>
+
+  <!-- ROULETTE -->
+  <section class="panel" id="tab-roulette">
+    <h2>Roulette</h2>
+    <p class="sub">Bet on a color. Green pays 14x, Red/Black pay 2x.</p>
+    <div class="roulette-wrap">
+      <div class="roulette-wheel" id="rouletteWheel"></div>
+      <div class="bet-controls">
+        <input type="number" id="rouletteBet" min="1" value="10">
+        <button class="btn roul-btn red" data-color="red">Red (2x)</button>
+        <button class="btn roul-btn black" data-color="black">Black (2x)</button>
+        <button class="btn roul-btn green" data-color="green">Green (14x)</button>
+      </div>
+      <div id="rouletteResult" class="game-result"></div>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="panel" id="tab-profile">
+    <h2>Profile</h2>
+    <div class="profile-card">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div class="profile-fields">
+        <label>Username</label>
+        <input type="text" id="usernameInput" maxlength="16" placeholder="Enter username">
+        <label>Avatar Color</label>
+        <input type="color" id="avatarColorInput" value="#ffb300">
+        <button id="saveProfileBtn" class="btn primary">Save Profile</button>
+      </div>
+    </div>
+    <div class="achievements-wrap">
+      <h3>Achievements</h3>
+      <div class="grid achievements-grid" id="achievementsGrid"></div>
+    </div>
+    <div class="save-controls">
+      <button id="manualSaveBtn" class="btn">💾 Save Game</button>
+      <button id="exportSaveBtn" class="btn">Export Save</button>
+      <button id="resetSaveBtn" class="btn danger">Reset Progress</button>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="panel" id="tab-stats">
+    <h2>Statistics</h2>
+    <div class="grid stats-grid" id="statsGrid"></div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section class="panel" id="tab-leaderboard">
+    <h2>Leaderboard</h2>
+    <p class="sub">Ranked by total net worth (money + inventory value).</p>
+    <table class="leaderboard-table">
+      <thead><tr><th>#</th><th>Player</th><th>Net Worth</th></tr></thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
