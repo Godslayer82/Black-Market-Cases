@@ -7,7 +7,7 @@
 
    This file is loaded as a <script type="module"> AFTER script.js,
    so everything script.js defines at the top level (STATE, saveState,
-   applyImportedState, toast, updateTopbar, renderAll, SAVE_KEY, ...)
+   applyImportedState, toast, updateTopbar, renderAll, ...)
    is already available here as ordinary global identifiers — no
    special wiring needed on the script.js side beyond the small
    window.CloudSync hook points it already calls.
@@ -87,14 +87,6 @@ const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 const els = {
   status:        $("acctStatus"),
-  sub:           $("acctSub"),
-  loggedOutForm: $("acctFormLoggedOut"),
-  loggedInForm:  $("acctFormLoggedIn"),
-  email:         $("acctEmail"),
-  password:      $("acctPassword"),
-  signInBtn:     $("acctSignInBtn"),
-  signUpBtn:     $("acctSignUpBtn"),
-  forgotLink:    $("acctForgotLink"),
   signOutBtn:    $("acctSignOutBtn"),
   syncNowBtn:    $("acctSyncNowBtn"),
   loggedInEmail: $("acctLoggedInEmail"),
@@ -133,7 +125,7 @@ function setStatus(msg, isError){
   els.status.classList.toggle("error", !!isError);
 }
 function setBusy(busy){
-  [els.signInBtn, els.signUpBtn, els.syncNowBtn, els.signOutBtn].forEach(b=>{
+  [els.syncNowBtn, els.signOutBtn].forEach(b=>{
     if(b) b.disabled = busy;
   });
 }
@@ -221,99 +213,31 @@ async function forceSyncNow(){
 }
 
 /* ---------------- UI state ---------------- */
-function renderLoggedOut(){
-  if(els.loggedOutForm) els.loggedOutForm.classList.remove("hidden");
-  if(els.loggedInForm) els.loggedInForm.classList.add("hidden");
-  setStatus("Not signed in — progress is only saved on this device.");
-}
 function renderLoggedIn(user){
-  if(els.loggedOutForm) els.loggedOutForm.classList.add("hidden");
-  if(els.loggedInForm) els.loggedInForm.classList.remove("hidden");
   if(els.loggedInEmail) els.loggedInEmail.textContent = user.email;
 }
 
 /* ---------------- auth actions ---------------- */
-// Distinguishes an explicit "Sign In" / "Create Account" click (where
-// we may want to ask about conflicting local vs cloud progress) from
-// Firebase silently restoring a previous session on page load (where
-// we just want to load the cloud save without interrupting anyone).
-let pendingExplicitAuth = false;
-
-// Raw Firebase calls, shared by both the login-gate form and the
-// Profile-tab account form. UI concerns (status text, busy state,
-// which form to clear) stay with the caller.
+// Raw Firebase calls, used by the login-gate form (the only place
+// sign-in/sign-up/forgot-password happen — an account is required to
+// play, so there's no separate "logged out" form elsewhere).
 async function performSignIn(email, password){
-  pendingExplicitAuth = true;
-  try{
-    await signInWithEmailAndPassword(auth, email, password);
-  }catch(e){
-    pendingExplicitAuth = false;
-    throw e;
-  }
+  return signInWithEmailAndPassword(auth, email, password);
 }
 async function performSignUp(email, password){
-  pendingExplicitAuth = true;
-  try{
-    await createUserWithEmailAndPassword(auth, email, password);
-  }catch(e){
-    pendingExplicitAuth = false;
-    throw e;
-  }
+  return createUserWithEmailAndPassword(auth, email, password);
 }
 async function performForgotPassword(email){
   return sendPasswordResetEmail(auth, email);
 }
 
-/* ----- Profile-tab account form ----- */
-async function handleSignIn(){
-  const email = (els.email.value||"").trim();
-  const password = els.password.value||"";
-  if(!email || !password){ setStatus("Enter an email and password", true); return; }
-  try{
-    setBusy(true);
-    setStatus("Signing in…");
-    await performSignIn(email, password);
-  }catch(e){
-    console.error(e);
-    setStatus(friendlyAuthError(e), true);
-  }finally{
-    setBusy(false);
-  }
-}
-async function handleSignUp(){
-  const email = (els.email.value||"").trim();
-  const password = els.password.value||"";
-  if(!email || !password){ setStatus("Enter an email and password", true); return; }
-  if(password.length < 6){ setStatus("Password must be at least 6 characters", true); return; }
-  try{
-    setBusy(true);
-    setStatus("Creating account…");
-    await performSignUp(email, password);
-  }catch(e){
-    console.error(e);
-    setStatus(friendlyAuthError(e), true);
-  }finally{
-    setBusy(false);
-  }
-}
+/* ----- Profile-tab account controls (sign out / sync only) ----- */
 async function handleSignOut(){
   try{
     await signOut(auth);
-    if(window.toast) window.toast("👋 Signed out — you're still saved locally on this device");
+    if(window.toast) window.toast("👋 Signed out — sign back in to keep playing");
   }catch(e){
     console.error(e);
-  }
-}
-async function handleForgotPassword(e){
-  e.preventDefault();
-  const email = (els.email.value||"").trim();
-  if(!email){ setStatus("Enter your email above first, then click this link", true); return; }
-  try{
-    await performForgotPassword(email);
-    setStatus("📧 Password reset email sent");
-  }catch(err){
-    console.error(err);
-    setStatus(friendlyAuthError(err), true);
   }
 }
 
@@ -365,59 +289,43 @@ function friendlyAuthError(e){
 }
 
 /* ---------------- the core sync-on-login flow ---------------- */
+// NOTE: play is fully blocked behind the login gate until this fires
+// with a signed-in user, and there's no local storage anymore — so
+// there is never legitimate "progress on this device" that predates
+// a sign-in. The cloud save (or a fresh default state, for a brand
+// new account) is always the single source of truth; no merge/
+// conflict prompt is needed.
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    renderLoggedOut();
-    // We now know for sure there's no session to restore — reveal
-    // the gate's sign-in form instead of leaving people on a spinner.
+    // No account signed in (fresh visit, or a sign-out mid-session) —
+    // clear whatever was in memory (it belongs to whoever was just
+    // signed in, if anyone) and re-block play behind the gate, since
+    // there's no local/guest fallback to keep playing on.
+    if(window.resetToDefaultState) window.resetToDefaultState();
+    window.openLoginGate();
     window.revealLoginGateForm();
     return;
   }
-  renderLoggedIn(user);
-  els.password && (els.password.value = "");
   gate.password && (gate.password.value = "");
+  renderLoggedIn(user);
   window.closeLoginGate();
-
-  const isExplicit = pendingExplicitAuth;
-  pendingExplicitAuth = false;
 
   try{
     setStatus("☁️ Checking cloud save…");
     const cloudState = await pullStateFromCloud(user.uid);
 
     if(!cloudState){
-      // Brand-new account, or an existing account with no cloud save
-      // yet — seed the cloud from whatever local progress exists.
+      // Brand-new account — seed its cloud save from the freshly
+      // started game (there's nothing else to pull it from now that
+      // there's no local storage).
       await pushAllToCloud(user.uid);
-      setStatus("☁️ Cloud save created from your local progress");
-      if(window.toast) window.toast("☁️ Cloud backup created");
+      setStatus("☁️ Cloud save created");
+      if(window.toast) window.toast("☁️ Cloud save created");
       return;
     }
 
-    if(isExplicit){
-      // A deliberate sign-in action — ask, since the person may be
-      // switching devices/accounts and local progress might matter.
-      const loadCloud = confirm(
-        "A cloud save was found for this account.\n\n" +
-        "Press OK to load your cloud save (replaces progress currently on this device).\n" +
-        "Press Cancel to keep this device's progress and overwrite the cloud save with it instead."
-      );
-      if(loadCloud){
-        window.applyImportedState(cloudState, { silent:true });
-        await pushPublicProfile(user.uid);
-        setStatus("☁️ Cloud save loaded");
-        if(window.toast) window.toast("☁️ Cloud save loaded");
-      } else {
-        await pushAllToCloud(user.uid);
-        setStatus("☁️ Cloud save overwritten with this device's progress");
-        if(window.toast) window.toast("☁️ Cloud save updated");
-      }
-    } else {
-      // Silent session restore (page refresh while already signed
-      // in) — the cloud is the source of truth, no interruption.
-      window.applyImportedState(cloudState, { silent:true });
-      setStatus("☁️ Synced");
-    }
+    window.applyImportedState(cloudState, { silent:true });
+    setStatus("☁️ Synced");
   }catch(e){
     console.error("Cloud sync error", e);
     setStatus("⚠️ Couldn't reach the cloud save — playing on local progress", true);
@@ -425,10 +333,7 @@ onAuthStateChanged(auth, async (user)=>{
 });
 
 /* ---------------- wire up UI ---------------- */
-els.signInBtn && els.signInBtn.addEventListener("click", handleSignIn);
-els.signUpBtn && els.signUpBtn.addEventListener("click", handleSignUp);
 els.signOutBtn && els.signOutBtn.addEventListener("click", handleSignOut);
-els.forgotLink && els.forgotLink.addEventListener("click", handleForgotPassword);
 els.syncNowBtn && els.syncNowBtn.addEventListener("click", forceSyncNow);
 
 gate.tabSignIn && gate.tabSignIn.addEventListener("click", ()=>setGateMode("signin"));

@@ -310,28 +310,14 @@
     </div>
 
     <div class="cloud-account-wrap">
-      <h3>☁️ Cloud Account</h3>
-      <p class="sub" id="acctSub">Your account backs up your progress and powers your public leaderboard profile.</p>
+      <h3>☁️ Account</h3>
       <div id="acctStatus" class="acct-status"></div>
-
-      <div id="acctFormLoggedOut" class="acct-form">
-        <input type="email" id="acctEmail" placeholder="Email" autocomplete="email">
-        <input type="password" id="acctPassword" placeholder="Password (min 6 characters)" autocomplete="current-password">
-        <div class="acct-btn-row">
-          <button id="acctSignInBtn" class="btn primary">Sign In</button>
-          <button id="acctSignUpBtn" class="btn">Create Account</button>
-        </div>
-        <a href="#" id="acctForgotLink" class="acct-forgot-link">Forgot password?</a>
+      <div class="acct-logged-in-row">
+        <span>Signed in as <strong id="acctLoggedInEmail"></strong></span>
       </div>
-
-      <div id="acctFormLoggedIn" class="acct-form hidden">
-        <div class="acct-logged-in-row">
-          <span>Signed in as <strong id="acctLoggedInEmail"></strong></span>
-        </div>
-        <div class="acct-btn-row">
-          <button id="acctSyncNowBtn" class="btn primary">☁️ Sync Now</button>
-          <button id="acctSignOutBtn" class="btn danger">Sign Out</button>
-        </div>
+      <div class="acct-btn-row">
+        <button id="acctSyncNowBtn" class="btn primary">☁️ Sync Now</button>
+        <button id="acctSignOutBtn" class="btn danger">Sign Out</button>
       </div>
     </div>
 

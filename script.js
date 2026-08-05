@@ -369,8 +369,6 @@ const ACHIEVEMENT_DEFS = [
 /* ============================================================
    STATE
    ============================================================ */
-const SAVE_KEY = "blackMarketCasesSave_v1";
-
 function defaultState(){
   return {
     username:"Player",
@@ -411,7 +409,7 @@ function defaultState(){
 
 let STATE = loadState();
 
-// Shared merge logic so both localStorage loads AND cloud/file imports
+// Shared merge logic so both Firestore cloud loads AND file imports
 // survive future field additions without wiping unrelated save data.
 function mergeStateWithDefaults(parsed){
   const base = defaultState();
@@ -430,40 +428,41 @@ function mergeStateWithDefaults(parsed){
   return merged;
 }
 
+// No local storage — Firestore is the only save target. This just
+// seeds an empty session; firebase-sync.js overwrites STATE via
+// applyImportedState() once sign-in resolves (an existing account's
+// cloud save gets pulled, or a brand-new account's save gets created
+// from this fresh default state).
 function loadState(){
-  try{
-    const raw = localStorage.getItem(SAVE_KEY);
-    if(!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return mergeStateWithDefaults(parsed);
-  }catch(e){
-    console.error("Failed to load save", e);
-    return defaultState();
-  }
+  return defaultState();
 }
 
 function saveState(silent){
   try{
     STATE.lastTick = Date.now();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(STATE));
     // Cloud sync hook — populated by firebase-sync.js once the
-    // person is signed in (accounts are required to play).
+    // person is signed in (accounts are required to play, and this
+    // is the only place progress is persisted — no local storage).
     if(window.CloudSync && typeof window.CloudSync.onLocalSave==="function"){
       window.CloudSync.onLocalSave();
     }
     if(!silent) toast("💾 Game saved");
   }catch(e){
     console.error("Failed to save", e);
-    if(!silent) toast("⚠️ Save failed (storage full?)");
+    if(!silent) toast("⚠️ Save failed — check your connection");
   }
 }
 
-// Replaces the live game state wholesale — used by both the local
-// "Import Save" file picker and cloud-load. Exposed on window so
+// Replaces the live game state wholesale — used by both the "Import
+// Save" file picker and cloud-load. Exposed on window so
 // firebase-sync.js (a separate module) can call it too.
 function applyImportedState(parsed, opts){
   opts = opts||{};
   STATE = mergeStateWithDefaults(parsed);
+  // Cloud restores are silent — there's no local save that could
+  // already have accounted for time passed since this was last
+  // synced, so credit offline earnings against the cloud's lastTick.
+  if(opts.silent) applyOfflineEarnings();
   updateTopbar();
   renderAll();
   checkAchievements();
@@ -472,6 +471,15 @@ function applyImportedState(parsed, opts){
 }
 window.applyImportedState = applyImportedState;
 window.getSaveSnapshot = function(){ return STATE; };
+
+// Clears whatever's in memory back to a blank slate — called by
+// firebase-sync.js on sign-out so a following sign-in (possibly to a
+// different account) never starts from another account's leftover
+// state. No re-render needed: the login gate covers the whole screen
+// whenever nobody's signed in.
+window.resetToDefaultState = function(){
+  STATE = defaultState();
+};
 
 // Small, denormalized snapshot written to the PUBLIC leaderboard doc —
 // only what's needed to render the leaderboard and a read-only profile
@@ -2213,11 +2221,16 @@ document.getElementById("importSaveInput").addEventListener("change", (e)=>{
 
 document.getElementById("resetSaveBtn").addEventListener("click", ()=>{
   if(!confirm("Reset ALL progress? This cannot be undone.")) return;
-  localStorage.removeItem(SAVE_KEY);
   STATE = defaultState();
   updateTopbar();
   renderAll();
   saveState(true);
+  // Push the reset immediately rather than waiting for the throttled
+  // autosave, so the cloud save (the only copy that exists) reflects
+  // it right away.
+  if(window.CloudSync && typeof window.CloudSync.forceSyncNow==="function"){
+    window.CloudSync.forceSyncNow();
+  }
   toast("🗑️ Progress reset");
 });
 
@@ -2393,30 +2406,43 @@ setInterval(()=>{
   }
 }, 1000);
 
-// autosave every 15s
+// autosave every 15s — schedules a throttled push to Firestore (the
+// only save target now that there's no local storage)
 setInterval(()=>saveState(true), 15000);
-window.addEventListener("beforeunload", ()=>saveState(true));
+window.addEventListener("beforeunload", ()=>{
+  // Best-effort: bypass the normal throttle and fire the Firestore
+  // write immediately, since a closing tab won't wait around for it.
+  if(window.CloudSync && typeof window.CloudSync.forceSyncNow==="function"){
+    window.CloudSync.forceSyncNow();
+  } else {
+    saveState(true);
+  }
+});
 
 /* ============================================================
    LOGIN GATE
    Pure-DOM open/close logic that never depends on firebase-sync.js
    having loaded successfully. An account is required to play — the
-   gate only closes once firebase-sync.js confirms a signed-in user
-   (see onAuthStateChanged -> window.closeLoginGate() there).
+   gate only closes once firebase-sync.js confirms a signed-in user,
+   and reopens (openLoginGate) if that account signs out again, since
+   there's no local/guest fallback to keep playing on.
    ============================================================ */
 function closeLoginGate(){
   const root = document.getElementById("loginGate");
   if(root) root.classList.add("gate-closed");
 }
-function revealLoginGateForm(){
+function openLoginGate(){
   const root = document.getElementById("loginGate");
-  if(root && root.classList.contains("gate-closed")) return; // already dismissed, don't reopen
+  if(root) root.classList.remove("gate-closed");
+}
+function revealLoginGateForm(){
   const loading = document.getElementById("gateLoading");
   const content = document.getElementById("gateContent");
   if(loading) loading.classList.add("hidden");
   if(content) content.classList.remove("hidden");
 }
 window.closeLoginGate = closeLoginGate;
+window.openLoginGate = openLoginGate;
 window.revealLoginGateForm = revealLoginGateForm;
 
 // safety net: if firebase-sync.js never loads (blocked CDN, offline,
