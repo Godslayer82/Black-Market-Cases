@@ -81,6 +81,34 @@ const els = {
   syncNowBtn:    $("acctSyncNowBtn"),
   loggedInEmail: $("acctLoggedInEmail"),
 };
+const gate = {
+  tabSignIn: $("gateTabSignIn"),
+  tabSignUp: $("gateTabSignUp"),
+  status:    $("gateStatus"),
+  email:     $("gateEmail"),
+  password:  $("gatePassword"),
+  submitBtn: $("gateSubmitBtn"),
+  forgotLink:$("gateForgotLink"),
+};
+const GUEST_FLAG_KEY = "bmc_guest_mode";
+let gateMode = "signin"; // or "signup"
+
+function setGateMode(mode){
+  gateMode = mode;
+  const isSignIn = mode==="signin";
+  gate.tabSignIn && gate.tabSignIn.classList.toggle("active", isSignIn);
+  gate.tabSignUp && gate.tabSignUp.classList.toggle("active", !isSignIn);
+  if(gate.submitBtn) gate.submitBtn.textContent = isSignIn ? "Sign In" : "Create Account";
+  setGateStatus("");
+}
+function setGateStatus(msg, isError){
+  if(!gate.status) return;
+  gate.status.textContent = msg||"";
+  gate.status.classList.toggle("error", !!isError);
+}
+function setGateBusy(busy){
+  [gate.submitBtn, gate.tabSignIn, gate.tabSignUp].forEach(b=>{ if(b) b.disabled = busy; });
+}
 
 function setStatus(msg, isError){
   if(!els.status) return;
@@ -168,6 +196,32 @@ function renderLoggedIn(user){
 // we just want to load the cloud save without interrupting anyone).
 let pendingExplicitAuth = false;
 
+// Raw Firebase calls, shared by both the login-gate form and the
+// Profile-tab account form. UI concerns (status text, busy state,
+// which form to clear) stay with the caller.
+async function performSignIn(email, password){
+  pendingExplicitAuth = true;
+  try{
+    await signInWithEmailAndPassword(auth, email, password);
+  }catch(e){
+    pendingExplicitAuth = false;
+    throw e;
+  }
+}
+async function performSignUp(email, password){
+  pendingExplicitAuth = true;
+  try{
+    await createUserWithEmailAndPassword(auth, email, password);
+  }catch(e){
+    pendingExplicitAuth = false;
+    throw e;
+  }
+}
+async function performForgotPassword(email){
+  return sendPasswordResetEmail(auth, email);
+}
+
+/* ----- Profile-tab account form ----- */
 async function handleSignIn(){
   const email = (els.email.value||"").trim();
   const password = els.password.value||"";
@@ -175,17 +229,14 @@ async function handleSignIn(){
   try{
     setBusy(true);
     setStatus("Signing in…");
-    pendingExplicitAuth = true;
-    await signInWithEmailAndPassword(auth, email, password);
+    await performSignIn(email, password);
   }catch(e){
-    pendingExplicitAuth = false;
     console.error(e);
     setStatus(friendlyAuthError(e), true);
   }finally{
     setBusy(false);
   }
 }
-
 async function handleSignUp(){
   const email = (els.email.value||"").trim();
   const password = els.password.value||"";
@@ -194,17 +245,14 @@ async function handleSignUp(){
   try{
     setBusy(true);
     setStatus("Creating account…");
-    pendingExplicitAuth = true;
-    await createUserWithEmailAndPassword(auth, email, password);
+    await performSignUp(email, password);
   }catch(e){
-    pendingExplicitAuth = false;
     console.error(e);
     setStatus(friendlyAuthError(e), true);
   }finally{
     setBusy(false);
   }
 }
-
 async function handleSignOut(){
   try{
     await signOut(auth);
@@ -213,18 +261,57 @@ async function handleSignOut(){
     console.error(e);
   }
 }
-
 async function handleForgotPassword(e){
   e.preventDefault();
   const email = (els.email.value||"").trim();
   if(!email){ setStatus("Enter your email above first, then click this link", true); return; }
   try{
-    await sendPasswordResetEmail(auth, email);
+    await performForgotPassword(email);
     setStatus("📧 Password reset email sent");
   }catch(err){
     console.error(err);
     setStatus(friendlyAuthError(err), true);
   }
+}
+
+/* ----- login-gate form ----- */
+async function handleGateSubmit(){
+  const email = (gate.email.value||"").trim();
+  const password = gate.password.value||"";
+  if(!email || !password){ setGateStatus("Enter an email and password", true); return; }
+  if(gateMode==="signup" && password.length < 6){ setGateStatus("Password must be at least 6 characters", true); return; }
+  try{
+    setGateBusy(true);
+    setGateStatus(gateMode==="signin" ? "Signing in…" : "Creating account…");
+    if(gateMode==="signin") await performSignIn(email, password);
+    else await performSignUp(email, password);
+    localStorage.removeItem(GUEST_FLAG_KEY);
+    // onAuthStateChanged takes it from here and closes the gate
+  }catch(e){
+    console.error(e);
+    setGateStatus(friendlyAuthError(e), true);
+  }finally{
+    setGateBusy(false);
+  }
+}
+async function handleGateForgot(e){
+  e.preventDefault();
+  const email = (gate.email.value||"").trim();
+  if(!email){ setGateStatus("Enter your email above first, then click this link", true); return; }
+  try{
+    await performForgotPassword(email);
+    setGateStatus("📧 Password reset email sent");
+  }catch(err){
+    console.error(err);
+    setGateStatus(friendlyAuthError(err), true);
+  }
+}
+function handleGateGuest(){
+  // kept for completeness / potential future reuse — actual guest
+  // button wiring lives in script.js so it works even if this
+  // module fails to load
+  localStorage.setItem(GUEST_FLAG_KEY, "1");
+  window.closeLoginGate();
 }
 
 function friendlyAuthError(e){
@@ -246,10 +333,16 @@ function friendlyAuthError(e){
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     renderLoggedOut();
+    // We now know for sure there's no session to restore — reveal
+    // the gate's sign-in form instead of leaving people on a spinner.
+    window.revealLoginGateForm();
     return;
   }
   renderLoggedIn(user);
   els.password && (els.password.value = "");
+  gate.password && (gate.password.value = "");
+  localStorage.removeItem(GUEST_FLAG_KEY);
+  window.closeLoginGate();
 
   const isExplicit = pendingExplicitAuth;
   pendingExplicitAuth = false;
@@ -303,9 +396,16 @@ els.signOutBtn && els.signOutBtn.addEventListener("click", handleSignOut);
 els.forgotLink && els.forgotLink.addEventListener("click", handleForgotPassword);
 els.syncNowBtn && els.syncNowBtn.addEventListener("click", forceSyncNow);
 
+gate.tabSignIn && gate.tabSignIn.addEventListener("click", ()=>setGateMode("signin"));
+gate.tabSignUp && gate.tabSignUp.addEventListener("click", ()=>setGateMode("signup"));
+gate.submitBtn && gate.submitBtn.addEventListener("click", handleGateSubmit);
+gate.forgotLink && gate.forgotLink.addEventListener("click", handleGateForgot);
+gate.password && gate.password.addEventListener("keydown", e=>{ if(e.key==="Enter") handleGateSubmit(); });
+
 /* ---------------- expose the hook points script.js calls ---------------- */
 window.CloudSync = {
   onLocalSave: scheduleCloudPush,
   forceSyncNow: forceSyncNow,
   getUser: ()=> auth.currentUser,
 };
+

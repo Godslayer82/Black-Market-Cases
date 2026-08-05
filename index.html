@@ -12,6 +12,38 @@
 
 <div id="toastContainer" class="toast-container"></div>
 
+<!-- LOGIN GATE — shown on first visit until signed in or guest chosen -->
+<div id="loginGate" class="login-gate">
+  <div class="login-gate-bg"></div>
+  <div class="login-gate-card">
+    <div class="login-gate-brand">
+      <span class="brand-mark">▣</span>
+      <span class="brand-name">BLACK<span class="accent">MARKET</span></span>
+    </div>
+    <p class="login-gate-tagline">Open cases. Flip coins. Build an empire.</p>
+
+    <div id="gateLoading" class="gate-loading">
+      <div class="spinner"></div>
+      <span>Checking session…</span>
+    </div>
+
+    <div id="gateContent" class="gate-content hidden">
+      <div class="gate-tabs">
+        <button class="gate-tab-btn active" id="gateTabSignIn" data-mode="signin">Sign In</button>
+        <button class="gate-tab-btn" id="gateTabSignUp" data-mode="signup">Create Account</button>
+      </div>
+      <div id="gateStatus" class="acct-status"></div>
+      <input type="email" id="gateEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="gatePassword" placeholder="Password (min 6 characters)" autocomplete="current-password">
+      <button id="gateSubmitBtn" class="btn primary gate-submit">Sign In</button>
+      <a href="#" id="gateForgotLink" class="acct-forgot-link">Forgot password?</a>
+      <div class="gate-divider"><span>or</span></div>
+      <button id="gateGuestBtn" class="btn gate-guest-btn">Continue as Guest</button>
+      <p class="gate-note">Guests play locally on this device. Sign in anytime from the Profile tab to back up progress to the cloud.</p>
+    </div>
+  </div>
+</div>
+
 <div class="shell">
 
   <aside class="sidebar">

@@ -2231,3 +2231,47 @@ setInterval(()=>{
 // autosave every 15s
 setInterval(()=>saveState(true), 15000);
 window.addEventListener("beforeunload", ()=>saveState(true));
+
+/* ============================================================
+   LOGIN GATE
+   Pure-DOM open/close logic that never depends on firebase-sync.js
+   having loaded successfully — if that module is blocked, offline,
+   or slow, people can still always fall back to guest play instead
+   of being stuck behind a spinner forever. firebase-sync.js (when it
+   does load) calls these same functions to close the gate on a
+   restored/explicit sign-in.
+   ============================================================ */
+const GATE_GUEST_FLAG_KEY = "bmc_guest_mode";
+
+function closeLoginGate(){
+  const root = document.getElementById("loginGate");
+  if(root) root.classList.add("gate-closed");
+}
+function revealLoginGateForm(){
+  const root = document.getElementById("loginGate");
+  if(root && root.classList.contains("gate-closed")) return; // already dismissed, don't reopen
+  const loading = document.getElementById("gateLoading");
+  const content = document.getElementById("gateContent");
+  if(loading) loading.classList.add("hidden");
+  if(content) content.classList.remove("hidden");
+}
+window.closeLoginGate = closeLoginGate;
+window.revealLoginGateForm = revealLoginGateForm;
+
+(function initLoginGate(){
+  if(localStorage.getItem(GATE_GUEST_FLAG_KEY)==="1"){
+    // returning guest — skip the spinner/form entirely
+    closeLoginGate();
+  } else {
+    // safety net: if firebase-sync.js never loads (blocked CDN,
+    // offline, ad-blocker) don't leave anyone stuck on a spinner
+    setTimeout(revealLoginGateForm, 4000);
+  }
+  const guestBtn = document.getElementById("gateGuestBtn");
+  if(guestBtn){
+    guestBtn.addEventListener("click", ()=>{
+      localStorage.setItem(GATE_GUEST_FLAG_KEY, "1");
+      closeLoginGate();
+    });
+  }
+})();
