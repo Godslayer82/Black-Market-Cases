@@ -15,30 +15,19 @@
    IMPORTANT — before you publish this:
    1. In the Firebase console, enable the "Email/Password" sign-in
       provider under Authentication → Sign-in method.
-   2. Set Firestore security rules so people can only read/write
-      their OWN private save document, and only write (never read
-      others') their own PUBLIC leaderboard/profile document:
-
-        rules_version = '2';
-        service cloud.firestore {
-          match /databases/{database}/documents {
-            match /users/{uid} {
-              allow read, write: if request.auth != null && request.auth.uid == uid;
-            }
-            match /leaderboard/{uid} {
-              allow read: if request.auth != null;
-              allow write: if request.auth != null && request.auth.uid == uid;
-            }
-          }
-        }
-
-      Without rule #2, anyone could read or overwrite anyone else's
-      save data. The /leaderboard collection is intentionally public
-      (readable by any signed-in user) since it powers the leaderboard
-      and other players' profile views — it only ever contains the
-      small denormalized snapshot from getPublicProfileSnapshot()
-      (username, avatar, net worth, up to 3 pinned items), never the
-      full save.
+   2. Deploy the rules in firestore.rules (next to this file) with
+      `firebase deploy --only firestore:rules`, or paste its contents
+      into the Firebase console under Firestore Database → Rules.
+      Without published rules, Firestore denies everything by default
+      — that's what causes "Missing or insufficient permissions" on
+      cloud sync / the leaderboard. The rules let people read/write
+      only their OWN private save doc, and only write (never read
+      others') their own PUBLIC leaderboard/profile doc — that
+      collection is intentionally readable by any signed-in player
+      since it powers the leaderboard and other players' profile
+      views. It only ever contains the small denormalized snapshot
+      from getPublicProfileSnapshot() (username, avatar, net worth,
+      up to 3 pinned items), never the full save.
    ============================================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -47,7 +36,6 @@ import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
   onAuthStateChanged,
   sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
@@ -85,12 +73,6 @@ const db = getFirestore(app);
 
 /* ---------------- DOM ---------------- */
 const $ = id => document.getElementById(id);
-const els = {
-  status:        $("acctStatus"),
-  signOutBtn:    $("acctSignOutBtn"),
-  syncNowBtn:    $("acctSyncNowBtn"),
-  loggedInEmail: $("acctLoggedInEmail"),
-};
 const gate = {
   tabSignIn: $("gateTabSignIn"),
   tabSignUp: $("gateTabSignUp"),
@@ -117,17 +99,6 @@ function setGateStatus(msg, isError){
 }
 function setGateBusy(busy){
   [gate.submitBtn, gate.tabSignIn, gate.tabSignUp].forEach(b=>{ if(b) b.disabled = busy; });
-}
-
-function setStatus(msg, isError){
-  if(!els.status) return;
-  els.status.textContent = msg || "";
-  els.status.classList.toggle("error", !!isError);
-}
-function setBusy(busy){
-  [els.syncNowBtn, els.signOutBtn].forEach(b=>{
-    if(b) b.disabled = busy;
-  });
 }
 
 /* ---------------- Firestore helpers ---------------- */
@@ -187,34 +158,25 @@ function scheduleCloudPush(){
     cloudPushTimer = null;
     try{
       await pushAllToCloud(auth.currentUser.uid);
-      setStatus("☁️ Synced just now");
     }catch(e){
       console.error("Cloud sync failed", e);
-      setStatus("⚠️ Cloud sync failed — will retry", true);
     }
   }, CLOUD_PUSH_MIN_INTERVAL_MS);
 }
 
+// Still used for the explicit-immediate pushes after a profile save or
+// a save import — the Account card (and its manual "Sync Now" button)
+// is gone, but those two spots still want the push to happen right
+// away instead of waiting for the throttled auto-sync above.
 async function forceSyncNow(){
   if(!auth.currentUser){ return; }
   try{
-    setBusy(true);
-    setStatus("☁️ Syncing…");
     await pushAllToCloud(auth.currentUser.uid);
-    setStatus("☁️ Synced just now");
     if(window.toast) window.toast("☁️ Cloud save updated");
   }catch(e){
     console.error(e);
-    setStatus("⚠️ Sync failed", true);
     if(window.toast) window.toast("⚠️ Cloud sync failed");
-  }finally{
-    setBusy(false);
   }
-}
-
-/* ---------------- UI state ---------------- */
-function renderLoggedIn(user){
-  if(els.loggedInEmail) els.loggedInEmail.textContent = user.email;
 }
 
 /* ---------------- auth actions ---------------- */
@@ -229,16 +191,6 @@ async function performSignUp(email, password){
 }
 async function performForgotPassword(email){
   return sendPasswordResetEmail(auth, email);
-}
-
-/* ----- Profile-tab account controls (sign out / sync only) ----- */
-async function handleSignOut(){
-  try{
-    await signOut(auth);
-    if(window.toast) window.toast("👋 Signed out — sign back in to keep playing");
-  }catch(e){
-    console.error(e);
-  }
 }
 
 /* ----- login-gate form ----- */
@@ -307,11 +259,9 @@ onAuthStateChanged(auth, async (user)=>{
     return;
   }
   gate.password && (gate.password.value = "");
-  renderLoggedIn(user);
   window.closeLoginGate();
 
   try{
-    setStatus("☁️ Checking cloud save…");
     const cloudState = await pullStateFromCloud(user.uid);
 
     if(!cloudState){
@@ -319,23 +269,18 @@ onAuthStateChanged(auth, async (user)=>{
       // started game (there's nothing else to pull it from now that
       // there's no local storage).
       await pushAllToCloud(user.uid);
-      setStatus("☁️ Cloud save created");
       if(window.toast) window.toast("☁️ Cloud save created");
       return;
     }
 
     window.applyImportedState(cloudState, { silent:true });
-    setStatus("☁️ Synced");
   }catch(e){
     console.error("Cloud sync error", e);
-    setStatus("⚠️ Couldn't reach the cloud save — playing on local progress", true);
+    if(window.toast) window.toast("⚠️ Couldn't reach the cloud save — playing on local progress");
   }
 });
 
 /* ---------------- wire up UI ---------------- */
-els.signOutBtn && els.signOutBtn.addEventListener("click", handleSignOut);
-els.syncNowBtn && els.syncNowBtn.addEventListener("click", forceSyncNow);
-
 gate.tabSignIn && gate.tabSignIn.addEventListener("click", ()=>setGateMode("signin"));
 gate.tabSignUp && gate.tabSignUp.addEventListener("click", ()=>setGateMode("signup"));
 gate.submitBtn && gate.submitBtn.addEventListener("click", handleGateSubmit);

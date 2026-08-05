@@ -787,32 +787,15 @@ h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;}
 .hidden{display:none;}
 
 /* ============================================================
-   CLOUD ACCOUNT (Firebase Auth)
+   CLOUD ACCOUNT (Firebase Auth) — status/link styling still used
+   by the login gate form
    ============================================================ */
-.cloud-account-wrap{
-  background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:20px 22px;margin:20px 0;max-width:460px;
-}
-.cloud-account-wrap h3{margin-bottom:4px;}
 .acct-status{
   font-family:var(--f-mono);font-size:.78em;color:var(--teal);min-height:1.4em;margin:8px 0 14px;
 }
 .acct-status.error{color:var(--crimson);}
-.acct-form{display:flex;flex-direction:column;gap:10px;}
-.acct-form input[type="email"],.acct-form input[type="password"]{
-  background:var(--panel3);border:1px solid var(--line);border-radius:8px;color:var(--text);
-  padding:10px 12px;font-family:var(--f-mono);font-size:.85em;width:100%;
-}
-.acct-form input:focus{outline:none;border-color:var(--amber-dim);}
-.acct-btn-row{display:flex;gap:10px;}
-.acct-btn-row .btn{flex:1;}
 .acct-forgot-link{color:var(--text-dim);font-size:.78em;text-decoration:underline;text-underline-offset:3px;}
 .acct-forgot-link:hover{color:var(--amber);}
-.acct-logged-in-row{
-  font-size:.88em;color:var(--text-dim);background:var(--panel3);border:1px solid var(--line-soft);
-  border-radius:8px;padding:10px 12px;
-}
-.acct-logged-in-row strong{color:var(--text);}
 
 /* ============================================================
    LOGIN GATE (first-visit full-screen auth screen)

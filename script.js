@@ -2179,8 +2179,6 @@ document.getElementById("saveProfileBtn").addEventListener("click", ()=>{
   }
 });
 
-document.getElementById("manualSaveBtn").addEventListener("click", ()=>saveState(false));
-
 document.getElementById("exportSaveBtn").addEventListener("click", ()=>{
   const data = JSON.stringify(STATE);
   const blob = new Blob([data], {type:"application/json"});
