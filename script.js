@@ -25,10 +25,16 @@ RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
 /* ---------------- SKIN DATABASE (generated) ---------------- */
 const WEAPONS = ["AK-47","M4A4","M4A1-S","AWP","Desert Eagle","USP-S","Glock-18","P250",
   "MAC-10","MP7","MP9","Nova","XM1014","SSG 08","G3SG1","FAMAS","Galil AR","P90","UMP-45","Five-SeveN"];
-const SUFFIXES_LOW = ["Safari Mesh","Forest DDPAT","Boreal Forest","Scorched","Urban Masked","Blue Laminate","Sand Dune","Jungle Spray"];
-const SUFFIXES_MID = ["Redline","Stained","Blue Steel","Case Hardened","Night","Blaze","Ocean Foam","Storm"];
-const SUFFIXES_HI  = ["Asiimov","Vulcan","Hyper Beast","Neon Rider","Fever Dream","Wildfire","Bloodsport","Printstream"];
-const SUFFIXES_EPIC= ["Dragon Lore","Fire Serpent","Howl","Medusa","Fade","Doppler","Marble Fade","Crimson Web"];
+const SUFFIXES_LOW = ["Safari Mesh","Forest DDPAT","Boreal Forest","Scorched","Urban Masked","Blue Laminate","Sand Dune","Jungle Spray",
+  "Rust Coat","Field Drab","Concrete","Paved","Gunsmoke","Grease Monkey","Cardboard","Rubber","Frontside Misty","Dark Age",
+  "Ash Wood","Freight","Fresh Paint","Hexane","Elite Build","Rat Rod","Aloha","Contour","Traveler","Grill"];
+const SUFFIXES_MID = ["Redline","Stained","Blue Steel","Case Hardened","Night","Blaze","Ocean Foam","Storm",
+  "Vanilla Swirl","Dune","Slate","Cyanospatter","Dragon Tattoo","Nitro","Snakebite","Shadow Web","Static Rift","Roll Cage",
+  "Frostbite","Vulcan Steel","Amber Fade","Copper Head","Rat Pack","Warhawk"];
+const SUFFIXES_HI  = ["Asiimov","Vulcan","Hyper Beast","Neon Rider","Fever Dream","Wildfire","Bloodsport","Printstream",
+  "Neo-Noir","Neon Revolution","Fade Runner","Chromatic Aberration","Head Shot","Toxic Rain","Freehand Blaze","Wasteland Rebel"];
+const SUFFIXES_EPIC= ["Dragon Lore","Fire Serpent","Howl","Medusa","Fade","Doppler","Marble Fade","Crimson Web",
+  "Gungnir","Wildfire Prime","Emerald Dragon","Golden Coil","Nightfall Ritual"];
 const ICONS_BY_WEAPON = {
   "AK-47":"🔫","M4A4":"🔫","M4A1-S":"🔫","AWP":"🎯","Desert Eagle":"🔫","USP-S":"🔫","Glock-18":"🔫","P250":"🔫",
   "MAC-10":"🔫","MP7":"🔫","MP9":"🔫","Nova":"🔫","XM1014":"🔫","SSG 08":"🎯","G3SG1":"🎯","FAMAS":"🔫",
@@ -183,21 +189,30 @@ function generateSkinDatabase(){
     milspec: SUFFIXES_MID, restricted: SUFFIXES_MID,
     classified: SUFFIXES_HI, covert: SUFFIXES_EPIC
   };
+  // commons/mids get MORE variants per weapon so drops feel far less
+  // repetitive; the rarer bands stay leaner so each name still feels special.
+  const picksPerBand = { consumer:4, industrial:4, milspec:3, restricted:3, classified:2, covert:2 };
   let idCounter = 1;
   WEAPONS.forEach((weapon, wi)=>{
     Object.keys(suffixSets).forEach(rarityId=>{
-      // pick 1-2 suffixes per weapon per rarity band deterministically for variety
       const suffixes = suffixSets[rarityId];
-      const pick = suffixes[wi % suffixes.length];
+      const count = Math.min(picksPerBand[rarityId], suffixes.length);
       const rarity = RARITIES[RARITY_INDEX[rarityId]];
-      db[rarityId].push({
-        id: "s"+(idCounter++),
-        name: `${weapon} | ${pick}`,
-        weapon, suffix:pick,
-        rarity: rarityId,
-        icon: ICONS_BY_WEAPON[weapon] || "🔫",
-        value: Math.round(rarity.valueMin + Math.random()*(rarity.valueMax-rarity.valueMin))
-      });
+      const used = new Set();
+      for(let k=0;k<count;k++){
+        const idx = (wi + k*7) % suffixes.length; // spread picks so neighboring weapons don't share the same suffix set
+        if(used.has(idx)) continue;
+        used.add(idx);
+        const pick = suffixes[idx];
+        db[rarityId].push({
+          id: "s"+(idCounter++),
+          name: `${weapon} | ${pick}`,
+          weapon, suffix:pick,
+          rarity: rarityId,
+          icon: ICONS_BY_WEAPON[weapon] || "🔫",
+          value: Math.round(rarity.valueMin + Math.random()*(rarity.valueMax-rarity.valueMin))
+        });
+      }
     });
   });
   return db;
@@ -236,6 +251,9 @@ const EXCLUSIVE_DB = [
   { id:"ex3", name:"AWP | The Black Market", weapon:"AWP", suffix:"The Black Market", rarity:"exclusive", icon:"🌟", value:60000 },
   { id:"ex4", name:"★ Talon Knife | Void", weapon:"Talon Knife", suffix:"Void", rarity:"exclusive", icon:"🌌", value:95000 },
   { id:"ex5", name:"AK-47 | Emperor's Ransom", weapon:"AK-47", suffix:"Emperor's Ransom", rarity:"exclusive", icon:"👑", value:100000 },
+  { id:"ex6", name:"★ Skeleton Knife | Eclipse", weapon:"Skeleton Knife", suffix:"Eclipse", rarity:"exclusive", icon:"🌑", value:110000 },
+  { id:"ex7", name:"M4A4 | Last Rites", weapon:"M4A4", suffix:"Last Rites", rarity:"exclusive", icon:"🕯️", value:88000 },
+  { id:"ex8", name:"★ Bayonet | Sovereign", weapon:"Bayonet", suffix:"Sovereign", rarity:"exclusive", icon:"👑", value:130000 },
 ];
 
 /* ---------------- CONTRABAND DATABASE ---------------- */
@@ -246,6 +264,10 @@ const CONTRABAND_DB = [
   { id:"cb3", name:"★ Butterfly Knife | Smuggler's Mark", weapon:"Butterfly Knife", suffix:"Smuggler's Mark", rarity:"contraband", icon:"☠️", value:260000 },
   { id:"cb4", name:"AK-47 | Iron Curtain", weapon:"AK-47", suffix:"Iron Curtain", rarity:"contraband", icon:"☠️", value:310000 },
   { id:"cb5", name:"★ Talon Knife | Blacksite", weapon:"Talon Knife", suffix:"Blacksite", rarity:"contraband", icon:"☠️", value:420000 },
+  // ---- ultra-rare: a tiny sliver of the already-tiny Contraband pool ----
+  { id:"cb6", name:"★ Karambit | One In A Million", weapon:"Karambit", suffix:"One In A Million", rarity:"contraband", icon:"🌠", value:600000 },
+  { id:"cb7", name:"★ Butterfly Knife | The Last Ledger", weapon:"Butterfly Knife", suffix:"The Last Ledger", rarity:"contraband", icon:"🌠", value:750000 },
+  { id:"cb8", name:"AWP | Kingmaker", weapon:"AWP", suffix:"Kingmaker", rarity:"contraband", icon:"🌠", value:900000 },
 ];
 
 function allSkinsForRarity(rarityId){
@@ -262,6 +284,18 @@ const STICKER_DEFS = [
   { id:"st_gold",     name:"Gold Charm",       icon:"🟡", cost:400,  boost:0.07 },
   { id:"st_skull",    name:"Skull Sticker",    icon:"💀", cost:900,  boost:0.10 },
   { id:"st_diamond",  name:"Diamond Sticker",  icon:"💠", cost:2200, boost:0.15 },
+  // ---- higher tiers: prices start climbing hard ----
+  { id:"st_holo",     name:"Holo Sticker",     icon:"🌈", cost:6000,      boost:0.20 },
+  { id:"st_foil",     name:"Foil Sticker",     icon:"✨", cost:15000,     boost:0.26 },
+  { id:"st_gold_foil",name:"Gold Foil Sticker",icon:"🏵️", cost:40000,     boost:0.33 },
+  { id:"st_crown",    name:"Crown Charm",      icon:"👑", cost:120000,    boost:0.42 },
+  { id:"st_relic",    name:"Ancient Relic Charm",icon:"🗿",cost:350000,   boost:0.55 },
+  // ---- "crazy prices" tier ----
+  { id:"st_vault",    name:"Vault Key Charm",  icon:"🗝️", cost:1200000,   boost:0.70 },
+  { id:"st_meteor",   name:"Meteorite Sticker",icon:"☄️", cost:5000000,   boost:0.90 },
+  { id:"st_phoenix",  name:"Phoenix Sticker",  icon:"🔥", cost:20000000,  boost:1.15 },
+  { id:"st_cosmic",   name:"Cosmic Sticker",   icon:"🌌", cost:100000000, boost:1.50 },
+  { id:"st_godlike",  name:"Godlike Sticker",  icon:"🕊️", cost:750000000, boost:2.00 },
 ];
 const STICKER_INDEX = {};
 STICKER_DEFS.forEach(s=>STICKER_INDEX[s.id]=s);
@@ -278,14 +312,24 @@ const CASES = [
   { id:"case_phantom", name:"Phantom Case", icon:"👻", price:180,
     oddsBoost:2.0, desc:"Ghostly rare odds boost." },
   { id:"case_nightfall", name:"Nightfall Case", icon:"🌌", price:400,
-    oddsBoost:3.0, desc:"The best weapon case odds money can buy." },
+    oddsBoost:3.0, desc:"Excellent weapon case odds." },
+  { id:"case_obsidian", name:"Obsidian Case", icon:"🖤", price:800,
+    oddsBoost:4.0, desc:"Dense, dark, and dangerously good odds." },
+  { id:"case_platinum", name:"Platinum Case", icon:"💠", price:1600,
+    oddsBoost:5.5, desc:"The best weapon case odds money can buy." },
 ];
 
 const KNIFE_CASES = [
+  { id:"kcase_rusty", name:"Rusty Blade Crate", icon:"🔪", price:800,
+    oddsBoost:1.0, desc:"Cheap entry point. Guaranteed Knife-tier or better." },
   { id:"kcase_basic", name:"Blade Crate", icon:"🎒", price:1500,
     oddsBoost:1.0, desc:"Guaranteed Knife-tier or better." },
   { id:"kcase_elite", name:"Elite Blade Crate", icon:"💼", price:4000,
     oddsBoost:1.0, exclusiveChanceMult:4, desc:"Guaranteed Knife-tier, much better shot at Exclusive." },
+  { id:"kcase_prestige", name:"Prestige Blade Crate", icon:"🏆", price:9000,
+    oddsBoost:1.0, exclusiveChanceMult:8, desc:"Guaranteed Knife-tier, serious odds at Exclusive." },
+  { id:"kcase_ultra", name:"Ultra Blade Crate", icon:"💎", price:20000,
+    oddsBoost:1.0, exclusiveChanceMult:16, desc:"The ultimate knife crate — the best Exclusive odds in the game." },
 ];
 
 /* ---------------- LIMITED-TIME / CONTRABAND CASES ----------------
@@ -296,6 +340,10 @@ const LIMITED_CASES = [
     contrabandChance:0.015, oddsBoost:2.2, desc:"Military surplus, off the books. Small shot at Contraband." },
   { id:"lcase_redledger", name:"Red Ledger Case", icon:"📕", price:6000,
     contrabandChance:0.04, oddsBoost:2.5, desc:"Cartel-grade crate. Much better Contraband odds." },
+  { id:"lcase_voidmarket", name:"Void Market Case", icon:"🕳️", price:15000,
+    contrabandChance:0.07, oddsBoost:3.0, desc:"Off the grid entirely. Serious Contraband odds, serious price." },
+  { id:"lcase_kingmaker", name:"Kingmaker Case", icon:"👑", price:40000,
+    contrabandChance:0.12, oddsBoost:3.5, desc:"For collectors chasing the single rarest items in the game." },
 ];
 // deterministically pick "today's" limited case so it feels like a
 // genuine daily rotation rather than a random reshuffle on every load
@@ -334,6 +382,10 @@ const UPGRADE_DEFS = {
   luck:      { name:"Better Luck", icon:"🍀", desc:"Increases odds of higher rarities.", base:100, growth:1.6, max:20 },
   speed:     { name:"Faster Opening", icon:"⚡", desc:"Reduces case opening animation time.", base:80, growth:1.5, max:10 },
   reward:    { name:"Bigger Rewards", icon:"💎", desc:"Increases sell value & generator income.", base:150, growth:1.7, max:20 },
+  genBoost:  { name:"Operations Efficiency", icon:"🏭", desc:"Further boosts all generator income on top of Bigger Rewards.", base:600, growth:1.8, max:20 },
+  contrabandLuck: { name:"Cartel Connections", icon:"☠️", desc:"Increases the Contraband drop chance in Limited Cases.", base:2500, growth:1.9, max:15 },
+  plinkoBoost: { name:"Rigged Rig", icon:"🟣", desc:"Increases every Plinko payout multiplier.", base:1000, growth:1.75, max:15 },
+  stickerDeal: { name:"Sticker Connect", icon:"🎫", desc:"Discounts every sticker in the Sticker Shop.", base:500, growth:1.7, max:15 },
 };
 
 /* ---------------- GENERATORS ---------------- */
@@ -376,6 +428,7 @@ const ACHIEVEMENT_DEFS = [
   { id:"prestige_1", icon:"👑", name:"Reborn", desc:"Retire and prestige for the first time.", check:s=>s.prestige.count>=1 },
   { id:"prestige_5", icon:"👑", name:"Serial Retiree", desc:"Prestige 5 times.", check:s=>s.prestige.count>=5 },
   { id:"prestige_25", icon:"👑", name:"Empire Builder", desc:"Prestige 25 times.", check:s=>s.prestige.count>=25 },
+  { id:"first_plinko_win", icon:"🟣", name:"Board Walker", desc:"Win a round of Plinko.", check:s=>(s.stats.plinkoWon||0)>=1 },
 ];
 
 /* ============================================================
@@ -388,7 +441,7 @@ function defaultState(){
     avatarUrl:"", // optional custom profile picture, direct image link
     money:200,
     inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
-    upgrades:{ luck:0, speed:0, reward:0 },
+    upgrades:{ luck:0, speed:0, reward:0, genBoost:0, contrabandLuck:0, plinkoBoost:0, stickerDeal:0 },
     generators:{ street_vendor:0, fence:0, smuggler:0, cartel:0, syndicate:0,
       offshore_bank:0, private_army:0, black_exchange:0, shadow_corp:0, global_monopoly:0 },
     prestige:{ points:0, count:0 },
@@ -416,7 +469,9 @@ function defaultState(){
       rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0 },
       crashesPlayed:0,
       crashesWon:0,
-      stickersApplied:0
+      stickersApplied:0,
+      plinkoDropped:0,
+      plinkoWon:0
     }
   };
 }
@@ -722,6 +777,44 @@ function toast(msg){
 }
 
 /* ============================================================
+   GLOBAL ANNOUNCEMENT TICKER
+   Extremely rare drops (Exclusive/Contraband unboxes, huge Plinko
+   hits) get broadcast to every signed-in player via a small shared
+   Firestore collection (see firebase-sync.js). Locally we always
+   show our own announcement immediately without waiting on the
+   network round-trip.
+   ============================================================ */
+let localAnnouncements = [];
+function renderGlobalAnnouncements(list){
+  const ticker = document.getElementById("globalAnnounceTicker");
+  const track = document.getElementById("gatTrack");
+  if(!ticker || !track) return;
+  if(!list || !list.length){ ticker.classList.add("hidden"); return; }
+  ticker.classList.remove("hidden");
+  track.innerHTML = list.slice(0,20).map(a=>`<span class="gat-item">${a.text}</span>`).join("");
+}
+function broadcastRareEvent(text){
+  localAnnouncements.unshift({ text, ts:Date.now() });
+  localAnnouncements = localAnnouncements.slice(0,20);
+  renderGlobalAnnouncements(localAnnouncements);
+  if(window.CloudSync && typeof window.CloudSync.announceDrop==="function"){
+    window.CloudSync.announceDrop(text).catch(()=>{});
+  }
+}
+// Called by firebase-sync.js whenever the shared announcements feed
+// updates, so drops from OTHER players show up here live too.
+window.onCloudAnnouncements = function(remoteList){
+  // merge remote feed with anything we've broadcast locally this
+  // session but that may not have round-tripped back yet
+  const merged = [...remoteList];
+  localAnnouncements.forEach(a=>{
+    if(!merged.some(m=>m.text===a.text && Math.abs((m.ts||0)-a.ts)<4000)) merged.unshift(a);
+  });
+  merged.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  renderGlobalAnnouncements(merged.slice(0,20));
+};
+
+/* ============================================================
    AUDIO (WebAudio synth - no files needed)
    ============================================================ */
 let audioCtx = null;
@@ -837,6 +930,7 @@ function refreshActiveTab(tab){
   if(tab==="leaderboard") renderLeaderboard();
   if(tab==="profile") renderProfile();
   if(tab==="crash"){ resizeCrashCanvas(); drawCrashGraph(); }
+  if(tab==="plinko"){ resizePlinkoCanvas(); drawPlinkoBoard(null); renderPlinkoSlots(); }
 }
 
 /* ============================================================
@@ -854,7 +948,7 @@ function totalIncomePerSec(){
     const lvl = STATE.generators[key]||0;
     if(lvl>0) total += GENERATOR_DEFS[key].baseIncome * lvl;
   });
-  return total * rewardMultiplier();
+  return total * rewardMultiplier() * (1 + (STATE.upgrades.genBoost||0)*0.15);
 }
 
 /* ============================================================
@@ -960,7 +1054,7 @@ function computeCaseOdds(caseDef, kind){
     ];
   }
   if(kind==="limited"){
-    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1);
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
     const rest = 1 - cbChance;
     const luckLevel = STATE.upgrades.luck;
     const luckMult = 1 + luckLevel*0.18;
@@ -1058,7 +1152,7 @@ function openCaseFlow(caseId, kind){
     }
   } else if(kind==="limited"){
     // the only path that can ever produce a Contraband-tier drop
-    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1);
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
     if(Math.random() < cbChance){
       resultSkin = pickSkinFromRarity("contraband");
     } else {
@@ -1108,9 +1202,10 @@ function runReelAnimation(resultSkin, onDone){
   // sprinkle a late "near miss" — a high-rarity item a couple slots
   // before the landing spot — to build tension, unless the real drop
   // already is one.
-  if(!isKnifeCrate && RARITY_INDEX[resultSkin.rarity] < 5 && Math.random() < 0.6){
+  let fakeoutSlot = -1;
+  if(!isKnifeCrate && RARITY_INDEX[resultSkin.rarity] < 5 && Math.random() < 0.8){
     const slot = ITEM_COUNT - 2 - Math.floor(Math.random()*3);
-    if(slot > 0) items[slot] = pickSkinFromRarity(RARITIES[5+Math.floor(Math.random()*2)].id);
+    if(slot > 0){ items[slot] = pickSkinFromRarity(RARITIES[5+Math.floor(Math.random()*2)].id); fakeoutSlot = slot; }
   }
   items.push(resultSkin); // land on the real result
   const targetIndex = items.length - 1; // remember where the winner sits before padding the tail
@@ -1129,7 +1224,7 @@ function runReelAnimation(resultSkin, onDone){
   }
 
   reel.innerHTML = items.map((s,i)=>`
-    <div class="reel-item rarity-${rarityMeta(s.rarity).css}" style="--ri-color:${rarityMeta(s.rarity).color}">
+    <div class="reel-item rarity-${rarityMeta(s.rarity).css} ${i===fakeoutSlot?"fakeout":""}" style="--ri-color:${rarityMeta(s.rarity).color}">
       <div class="ri-icon">${buildSkinIcon(s)}</div>
       <div class="ri-name">${s.name}</div>
     </div>
@@ -1189,7 +1284,8 @@ function showResultCard(item){
   const card = document.getElementById("resultCard");
   const meta = rarityMeta(item.rarity);
   const rIdx = RARITY_INDEX[item.rarity];
-  card.className = "result-card rarity-"+meta.css + (rIdx>=6? " holo":"");
+  const isMega = rIdx>=6; // knife tier and above
+  card.className = "result-card rarity-"+meta.css + (rIdx>=6? " holo":"") + (isMega? " mega":"");
   card.style.setProperty("--ri-color", meta.color);
   card.innerHTML = `
     <div class="ri-icon">${buildSkinIcon(item)}</div>
@@ -1203,8 +1299,22 @@ function showResultCard(item){
   const cx = window.innerWidth/2, cy = window.innerHeight/2 - 40;
   burstParticles(cx, cy, meta.color, RARITY_INDEX[item.rarity]>=5?90:40);
 
+  if(isMega){
+    document.body.classList.add("legendary-flash");
+    setTimeout(()=>document.body.classList.remove("legendary-flash"), 750);
+    // a bigger, delayed second burst for extra drama on the very top tiers
+    if(rIdx>=7){
+      setTimeout(()=>burstParticles(cx, cy, meta.color, 140), 220);
+    }
+  }
+
   if(RARITY_INDEX[item.rarity]>=4){
     toast(`✨ You unboxed: ${item.name}!`);
+  }
+
+  // extremely rare drops get broadcast to every signed-in player
+  if(rIdx>=7){
+    broadcastRareEvent(`🌍 ${STATE.username} just unboxed <b>${item.name}</b> (${meta.label}) worth ${formatMoney(item.value)}!`);
   }
 }
 
@@ -1632,15 +1742,19 @@ document.getElementById("itemInspectModal").addEventListener("click", e=>{
    ============================================================ */
 function renderStickerShop(){
   const grid = document.getElementById("stickerShopGrid");
-  grid.innerHTML = STICKER_DEFS.map(s=>`
-    <div class="sticker-shop-card">
+  const discount = 1 - (STATE.upgrades.stickerDeal||0)*0.03;
+  grid.innerHTML = STICKER_DEFS.map(s=>{
+    const tier = s.cost>=100000000?"cosmic":s.cost>=1000000?"legendary":s.cost>=15000?"premium":"";
+    const price = Math.max(1, Math.round(s.cost*discount));
+    return `
+    <div class="sticker-shop-card ${tier}">
       <div class="ss-icon">${s.icon}</div>
       <div class="ss-name">${s.name}</div>
       <div class="ss-boost">+${Math.round(s.boost*100)}% sell value</div>
       <div class="ss-owned">Owned: ${STATE.stickerBag[s.id]||0}</div>
-      <button class="btn primary small buy-sticker-btn" data-id="${s.id}">Buy — ${formatMoney(s.cost)}</button>
-    </div>
-  `).join("");
+      <button class="btn primary small buy-sticker-btn" data-id="${s.id}">Buy — ${formatMoney(price)}</button>
+    </div>`;
+  }).join("");
 }
 document.getElementById("stickerShopBtn").addEventListener("click", ()=>{
   renderStickerShop();
@@ -1654,9 +1768,11 @@ document.getElementById("stickerShopModal").addEventListener("click", e=>{
   if(e.target.classList.contains("buy-sticker-btn")){
     const id = e.target.dataset.id;
     const def = STICKER_INDEX[id];
-    if(STATE.money < def.cost){ toast("❌ Not enough money"); return; }
-    STATE.money -= def.cost;
-    STATE.stats.totalSpent += def.cost;
+    const discount = 1 - (STATE.upgrades.stickerDeal||0)*0.03;
+    const price = Math.max(1, Math.round(def.cost*discount));
+    if(STATE.money < price){ toast("❌ Not enough money"); return; }
+    STATE.money -= price;
+    STATE.stats.totalSpent += price;
     STATE.stickerBag[id] = (STATE.stickerBag[id]||0)+1;
     sfx("buy");
     toast(`🎫 Bought ${def.name}`);
@@ -2222,6 +2338,207 @@ document.getElementById("crashCashoutBtn").addEventListener("click", cashOutCras
 resizeCrashCanvas();
 
 /* ============================================================
+   PLINKO
+   ============================================================ */
+const PLINKO_ROWS = 12;
+const PLINKO_RISK_TABLES = {
+  // 13 slots (rows+1), symmetric edge-to-center payouts.
+  low:    [8, 4, 2, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 2, 4, 8],
+  medium: [22, 9, 4, 2, 1.2, 0.6, 0.3, 0.6, 1.2, 2, 4, 9, 22],
+  high:   [110, 32, 11, 4, 1.4, 0.3, 0.2, 0.3, 1.4, 4, 11, 32, 110],
+};
+const plinkoCanvas = document.getElementById("plinkoCanvas");
+const plinkoCtx = plinkoCanvas.getContext("2d");
+let plinkoRunning = false;
+
+function resizePlinkoCanvas(){
+  const rect = plinkoCanvas.parentElement.getBoundingClientRect();
+  plinkoCanvas.width = rect.width;
+  plinkoCanvas.height = rect.height;
+}
+window.addEventListener("resize", resizePlinkoCanvas);
+
+function plinkoBoostMult(){
+  return 1 + (STATE.upgrades.plinkoBoost||0)*0.08;
+}
+
+function renderPlinkoSlots(){
+  const risk = document.getElementById("plinkoRisk").value;
+  const table = PLINKO_RISK_TABLES[risk];
+  const boost = plinkoBoostMult();
+  const wrap = document.getElementById("plinkoSlots");
+  wrap.innerHTML = table.map((m,i)=>{
+    const eff = (m*boost);
+    const hue = m>=10 ? 8 : m>=2 ? 42 : m>=1 ? 172 : 0;
+    const light = m>=10 ? 52 : m>=2 ? 55 : m>=1 ? 45 : 34;
+    return `<div class="plinko-slot" data-i="${i}" style="background:hsl(${hue},80%,${light}%)">${eff.toFixed(2)}x</div>`;
+  }).join("");
+}
+document.getElementById("plinkoRisk").addEventListener("change", renderPlinkoSlots);
+
+function plinkoPegPositions(){
+  const w = plinkoCanvas.width, h = plinkoCanvas.height;
+  const marginTop = h*0.10, marginBottom = h*0.18;
+  const usableH = h - marginTop - marginBottom;
+  const rowGap = usableH / PLINKO_ROWS;
+  const rows = [];
+  for(let r=0;r<PLINKO_ROWS;r++){
+    const count = r+2;
+    const gapX = (w*0.86) / (PLINKO_ROWS+1);
+    const rowWidth = gapX*(count-1);
+    const startX = (w-rowWidth)/2;
+    const y = marginTop + r*rowGap;
+    const pegs = [];
+    for(let i=0;i<count;i++) pegs.push({ x:startX+i*gapX, y });
+    rows.push(pegs);
+  }
+  return { rows, marginTop, marginBottom, rowGap, gapX:(w*0.86)/(PLINKO_ROWS+1) };
+}
+
+function drawPlinkoBoard(ball){
+  const w = plinkoCanvas.width, h = plinkoCanvas.height;
+  plinkoCtx.clearRect(0,0,w,h);
+  const board = plinkoPegPositions();
+  plinkoCtx.fillStyle = "rgba(255,255,255,.35)";
+  board.rows.forEach(pegs=>{
+    pegs.forEach(p=>{
+      plinkoCtx.beginPath();
+      plinkoCtx.arc(p.x, p.y, 3.4, 0, Math.PI*2);
+      plinkoCtx.fill();
+    });
+  });
+  if(ball){
+    const grad = plinkoCtx.createRadialGradient(ball.x,ball.y,0,ball.x,ball.y,9);
+    grad.addColorStop(0,"#fff8e0");
+    grad.addColorStop(1,"#f2a93b");
+    plinkoCtx.fillStyle = grad;
+    plinkoCtx.beginPath();
+    plinkoCtx.arc(ball.x, ball.y, 7, 0, Math.PI*2);
+    plinkoCtx.fill();
+    plinkoCtx.save();
+    plinkoCtx.shadowColor = "#f2a93b";
+    plinkoCtx.shadowBlur = 16;
+    plinkoCtx.fill();
+    plinkoCtx.restore();
+  }
+  return board;
+}
+
+// binomial random walk: at each of the 12 rows the ball bounces left(0)
+// or right(1) off a peg with 50/50 odds, landing in slot = sum of rights.
+function plinkoDrop(){
+  if(plinkoRunning) return;
+  const betInput = document.getElementById("plinkoBet");
+  const bet = Math.floor(Number(betInput.value));
+  if(!bet || bet<1){ toast("❌ Enter a valid bet"); return; }
+  if(STATE.money < bet){ toast("❌ Not enough money"); return; }
+  const risk = document.getElementById("plinkoRisk").value;
+  const table = PLINKO_RISK_TABLES[risk];
+
+  STATE.money -= bet;
+  STATE.stats.totalSpent += bet;
+  updateTopbar();
+  plinkoRunning = true;
+  document.getElementById("plinkoDropBtn").disabled = true;
+
+  const moves = [];
+  let slot = 0;
+  for(let i=0;i<PLINKO_ROWS;i++){
+    const right = Math.random()<0.5 ? 1 : 0;
+    moves.push(right);
+    slot += right;
+  }
+
+  const board = plinkoPegPositions();
+  const w = plinkoCanvas.width, h = plinkoCanvas.height;
+  const ball = { x:w/2, y:board.marginTop-14 };
+  let row = 0;
+  const rowGap = board.rowGap;
+
+  function stepRow(){
+    if(row>=PLINKO_ROWS){
+      finishPlinko();
+      return;
+    }
+    const pegs = board.rows[row];
+    const cumRight = moves.slice(0,row+1).reduce((a,b)=>a+b,0);
+    const targetX = pegs[cumRight].x;
+    const targetY = pegs[0].y;
+    const startX = ball.x, startY = ball.y;
+    const dur = 130;
+    const t0 = performance.now();
+    function anim(now){
+      const t = Math.min(1, (now-t0)/dur);
+      ball.x = startX + (targetX-startX)*t;
+      ball.y = startY + (targetY-startY)*t + Math.sin(t*Math.PI)*6;
+      drawPlinkoBoard(ball);
+      if(t<1){ requestAnimationFrame(anim); }
+      else { sfx("spin"); row++; stepRow(); }
+    }
+    requestAnimationFrame(anim);
+  }
+
+  function finishPlinko(){
+    // settle into the bottom slot
+    const slotCount = table.length;
+    const usableW = w*0.86;
+    const slotW = usableW/slotCount;
+    const finalX = (w-usableW)/2 + slotW*(slot+0.5);
+    const finalY = h - board.marginBottom*0.4;
+    const startX = ball.x, startY = ball.y;
+    const dur = 220;
+    const t0 = performance.now();
+    function anim(now){
+      const t = Math.min(1, (now-t0)/dur);
+      ball.x = startX + (finalX-startX)*t;
+      ball.y = startY + (finalY-startY)*t;
+      drawPlinkoBoard(ball);
+      if(t<1){ requestAnimationFrame(anim); }
+      else { settlePlinko(); }
+    }
+    requestAnimationFrame(anim);
+  }
+
+  function settlePlinko(){
+    const boost = plinkoBoostMult();
+    const mult = table[slot]*boost;
+    const payout = Math.round(bet*mult);
+    const win = payout >= bet;
+    STATE.money += payout;
+    STATE.stats.totalEarned += Math.max(0, payout-bet);
+    STATE.stats.plinkoDropped = (STATE.stats.plinkoDropped||0)+1;
+    if(win) STATE.stats.plinkoWon = (STATE.stats.plinkoWon||0)+1;
+    const resultEl = document.getElementById("plinkoResult");
+    resultEl.textContent = win
+      ? `🎉 Landed ${mult.toFixed(2)}x — won ${formatMoney(payout)}`
+      : `💀 Landed ${mult.toFixed(2)}x — only got ${formatMoney(payout)} back`;
+    resultEl.className = "game-result " + (win?"win":"lose");
+    sfx(win?"win":"lose");
+    if(mult>=10){
+      burstParticles(ball.x + plinkoCanvas.getBoundingClientRect().left, ball.y + plinkoCanvas.getBoundingClientRect().top, "#f2a93b", 70);
+      broadcastRareEvent(`💥 ${STATE.username} hit a ${mult.toFixed(0)}x Plinko drop for ${formatMoney(payout)}!`);
+    }
+    const slotEls = document.querySelectorAll("#plinkoSlots .plinko-slot");
+    if(slotEls[slot]){
+      slotEls[slot].classList.add("hit");
+      setTimeout(()=>slotEls[slot] && slotEls[slot].classList.remove("hit"), 600);
+    }
+    updateTopbar();
+    checkAchievements();
+    saveState(true);
+    plinkoRunning = false;
+    document.getElementById("plinkoDropBtn").disabled = false;
+  }
+
+  stepRow();
+}
+
+document.getElementById("plinkoDropBtn").addEventListener("click", plinkoDrop);
+resizePlinkoCanvas();
+renderPlinkoSlots();
+drawPlinkoBoard(null);
+
+/* ============================================================
    PROFILE
    ============================================================ */
 function renderProfile(){
@@ -2381,6 +2698,7 @@ function renderStats(){
     ["🪙 Coinflips Won", `${s.coinflipsWon} / ${s.coinflipsPlayed}`],
     ["🎡 Roulette Won", `${s.rouletteWon} / ${s.roulettePlayed}`],
     ["📈 Crash Cashouts", `${s.crashesWon} / ${s.crashesPlayed}`],
+    ["🟣 Plinko Won", `${s.plinkoWon||0} / ${s.plinkoDropped||0}`],
     ["🏷️ Skins Sold", s.skinsSold],
     ["⭐ Best Drop", s.bestDrop ? s.bestDrop.name : "—"],
   ];
@@ -2493,6 +2811,23 @@ function init(){
   saveState(true);
 }
 init();
+
+/* ============================================================
+   ANIMATED FAVICON — alternates between two icons every 5s
+   ============================================================ */
+const FAVICON_URLS = [
+  "https://avatars.githubusercontent.com/u/283798280?v=4",
+  "https://avatars.githubusercontent.com/u/151978475?v=4",
+];
+(function animateFavicon(){
+  const link = document.getElementById("faviconLink");
+  if(!link) return;
+  let i = 0;
+  setInterval(()=>{
+    i = (i+1) % FAVICON_URLS.length;
+    link.href = FAVICON_URLS[i];
+  }, 5000);
+})();
 
 // keep the daily-free-case / limited-case countdowns ticking while
 // the Cases tab is visible

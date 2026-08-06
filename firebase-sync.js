@@ -44,12 +44,14 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
   serverTimestamp,
   collection,
   query,
   orderBy,
   limit,
-  getDocs
+  getDocs,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -145,6 +147,39 @@ async function fetchLeaderboard(topN){
     out.push({ uid: docSnap.id, ...docSnap.data() });
   });
   return out;
+}
+
+/* ---------------- global rare-drop announcements ----------------
+   Small shared feed: anyone signed in can create an announcement
+   doc (never update/delete one — see firestore.rules) and everyone
+   signed in can read the collection. Powers the ticker at the top
+   of the page for extremely rare drops across ALL players. */
+const announcementsColRef = collection(db, "announcements");
+async function announceDrop(text){
+  if(!auth.currentUser) return;
+  await addDoc(announcementsColRef, {
+    text,
+    uid: auth.currentUser.uid,
+    ts: serverTimestamp()
+  });
+}
+let announcementsUnsub = null;
+function startAnnouncementsListener(){
+  if(announcementsUnsub) return;
+  try{
+    const q = query(announcementsColRef, orderBy("ts", "desc"), limit(15));
+    announcementsUnsub = onSnapshot(q, snap=>{
+      const list = [];
+      snap.forEach(docSnap=>{
+        const d = docSnap.data();
+        list.push({ text: d.text, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : Date.now() });
+      });
+      if(window.onCloudAnnouncements) window.onCloudAnnouncements(list);
+    }, err=>{ console.error("Announcements listener failed", err); });
+  }catch(e){ console.error(e); }
+}
+function stopAnnouncementsListener(){
+  if(announcementsUnsub){ announcementsUnsub(); announcementsUnsub = null; }
 }
 
 /* ---------------- throttled auto-sync ---------------- */
@@ -253,6 +288,7 @@ onAuthStateChanged(auth, async (user)=>{
     // clear whatever was in memory (it belongs to whoever was just
     // signed in, if anyone) and re-block play behind the gate, since
     // there's no local/guest fallback to keep playing on.
+    stopAnnouncementsListener();
     if(window.resetToDefaultState) window.resetToDefaultState();
     window.openLoginGate();
     window.revealLoginGateForm();
@@ -260,6 +296,7 @@ onAuthStateChanged(auth, async (user)=>{
   }
   gate.password && (gate.password.value = "");
   window.closeLoginGate();
+  startAnnouncementsListener();
 
   try{
     const cloudState = await pullStateFromCloud(user.uid);
@@ -293,5 +330,6 @@ window.CloudSync = {
   forceSyncNow: forceSyncNow,
   fetchLeaderboard: fetchLeaderboard,
   getUser: ()=> auth.currentUser,
+  announceDrop: announceDrop,
 };
 

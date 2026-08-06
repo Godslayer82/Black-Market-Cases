@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Black Market Cases</title>
+<link rel="icon" id="faviconLink" href="https://avatars.githubusercontent.com/u/283798280?v=4">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +12,11 @@
 <canvas id="particleCanvas"></canvas>
 
 <div id="toastContainer" class="toast-container"></div>
+
+<div id="globalAnnounceTicker" class="global-announce-ticker hidden">
+  <span class="gat-label">🌍 LIVE</span>
+  <div class="gat-track" id="gatTrack"></div>
+</div>
 
 <!-- LOGIN GATE — shown until the person signs in or creates an account. An account is required to play. -->
 <div id="loginGate" class="login-gate">
@@ -67,6 +73,7 @@
       <button class="tab-btn" data-tab="coinflip"><span class="ti">🪙</span>Coinflip</button>
       <button class="tab-btn" data-tab="roulette"><span class="ti">🎡</span>Roulette</button>
       <button class="tab-btn" data-tab="crash"><span class="ti">📈</span>Crash</button>
+      <button class="tab-btn" data-tab="plinko"><span class="ti">🟣</span>Plinko</button>
 
       <div class="nav-group-label">You</div>
       <button class="tab-btn" data-tab="profile"><span class="ti">👤</span>Profile</button>
@@ -296,6 +303,28 @@
         <button id="crashCashoutBtn" class="btn danger" disabled>Cash Out</button>
       </div>
       <div id="crashHistory" class="crash-history"></div>
+    </div>
+  </section>
+
+  <!-- PLINKO -->
+  <section class="panel" id="tab-plinko">
+    <h2>Plinko</h2>
+    <p class="sub">Drop the ball. Edges pay huge, center pays small. Better Plinko Rig upgrades boost every multiplier.</p>
+    <div class="plinko-wrap">
+      <div class="plinko-board-wrap">
+        <canvas id="plinkoCanvas"></canvas>
+      </div>
+      <div class="plinko-slots" id="plinkoSlots"></div>
+      <div class="bet-controls">
+        <input type="number" id="plinkoBet" min="1" value="10">
+        <select id="plinkoRisk">
+          <option value="low">Low Risk</option>
+          <option value="medium" selected>Medium Risk</option>
+          <option value="high">High Risk</option>
+        </select>
+        <button id="plinkoDropBtn" class="btn primary">Drop Ball</button>
+      </div>
+      <div id="plinkoResult" class="game-result"></div>
     </div>
   </section>
 
