@@ -31,6 +31,10 @@
   --c-knife:#ffcf40;
   --c-exclusive:#ff5ecb;
   --c-contraband:#ff1a1a;
+  --c-mythical:#ff6600;
+  --c-divine:#00eaff;
+  --c-cosmic:#bf00ff;
+  --c-singularity:#ffffff;
 
   --f-display:'Arial Narrow',"Helvetica Neue",Arial,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
@@ -237,16 +241,16 @@ h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;}
 
 /* ---- animated skins / ambient special effects on rare cards ---- */
 .rarity-classified .skin-icon svg,.rarity-covert .skin-icon svg,
-.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,
+.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,.rarity-mythical .skin-icon svg,.rarity-divine .skin-icon svg,.rarity-cosmic .skin-icon svg,.rarity-singularity .skin-icon svg,
 .rarity-classified .ri-icon svg,.rarity-covert .ri-icon svg,
-.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg{
+.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg,.rarity-mythical .ri-icon svg,.rarity-divine .ri-icon svg,.rarity-cosmic .ri-icon svg,.rarity-singularity .ri-icon svg{
   animation:skinShimmer 3s ease-in-out infinite;
 }
 @keyframes skinShimmer{
   0%,100%{filter:drop-shadow(0 3px 6px rgba(0,0,0,.55)) brightness(1) saturate(1);}
   50%{filter:drop-shadow(0 3px 10px var(--ri-border,rgba(0,0,0,.55))) brightness(1.2) saturate(1.4);}
 }
-.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after{
+.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after,.rarity-mythical .skin-icon::after,.rarity-divine .skin-icon::after,.rarity-cosmic .skin-icon::after,.rarity-singularity .skin-icon::after{
   content:"";position:absolute;inset:-8px;pointer-events:none;
   background:
     radial-gradient(circle at 26% 22%, rgba(255,255,255,.95), transparent 4%),
@@ -635,6 +639,63 @@ body.legendary-flash::before{
   50%{box-shadow:0 0 30px rgba(255,26,26,.55);}
 }
 .text-contraband{color:var(--c-contraband);}
+
+/* ============================================================
+   ULTRA-RARE TIERS
+   ============================================================ */
+.rarity-mythical{
+  --ri-border:#ff6600;
+  box-shadow:0 0 28px rgba(255,102,0,.45);
+  animation:mythicalPulse 2.2s ease-in-out infinite;
+}
+@keyframes mythicalPulse{
+  0%,100%{box-shadow:0 0 18px rgba(255,102,0,.32);}
+  50%{box-shadow:0 0 38px rgba(255,102,0,.7);}
+}
+.text-mythical{color:#ff6600;}
+
+.rarity-divine{
+  --ri-border:#00eaff;
+  box-shadow:0 0 32px rgba(0,234,255,.5);
+  animation:divinePulse 2s ease-in-out infinite;
+}
+@keyframes divinePulse{
+  0%,100%{box-shadow:0 0 20px rgba(0,234,255,.35);}
+  50%{box-shadow:0 0 46px rgba(0,234,255,.8);}
+}
+.text-divine{color:#00eaff;}
+
+.rarity-cosmic{
+  --ri-border:#bf00ff;
+  box-shadow:0 0 38px rgba(191,0,255,.55);
+  animation:cosmicPulse 1.8s ease-in-out infinite;
+}
+@keyframes cosmicPulse{
+  0%,100%{box-shadow:0 0 22px rgba(191,0,255,.38);}
+  50%{box-shadow:0 0 55px rgba(191,0,255,.88);}
+}
+.text-cosmic{color:#bf00ff;}
+
+.rarity-singularity{
+  --ri-border:#ffffff;
+  box-shadow:0 0 50px rgba(255,255,255,.65);
+  animation:singularityPulse 1.4s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(191,0,255,.12),rgba(0,234,255,.08));
+}
+@keyframes singularityPulse{
+  0%,100%{box-shadow:0 0 30px rgba(255,255,255,.45),0 0 60px rgba(191,0,255,.3);}
+  50%{box-shadow:0 0 70px rgba(255,255,255,.9),0 0 120px rgba(0,234,255,.5),0 0 160px rgba(191,0,255,.4);}
+}
+.text-singularity{color:#ffffff;text-shadow:0 0 10px rgba(191,0,255,.8);}
+
+/* multi-open result card */
+.multi-open-result{
+  display:flex;flex-direction:column;gap:6px;padding:12px;max-height:70vh;overflow-y:auto;min-width:340px;
+}
+.multi-result-row{
+  display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--ri-color,#444);background:rgba(0,0,0,.3);font-size:.85em;
+}
 
 /* ============================================================
    LIMITED-TIME CASES / DAILY FREE

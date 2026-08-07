@@ -17,7 +17,11 @@ const RARITIES = [
   // Contraband has weight 0 so it can NEVER be selected by the normal
   // weightedPickRarity pool — it is only ever handed out directly by
   // the rotating limited-time case logic further down this file.
-  { id:"contraband", label:"Contraband",     css:"contraband", color:"#ff1a1a", weight:0,    valueMin:100000,valueMax:500000 },
+  { id:"contraband",  label:"Contraband",     css:"contraband",  color:"#ff1a1a", weight:0, valueMin:100000,    valueMax:500000 },
+  { id:"mythical",    label:"Mythical",        css:"mythical",    color:"#ff6600", weight:0, valueMin:1000000,   valueMax:5000000 },
+  { id:"divine",      label:"Divine",          css:"divine",      color:"#00eaff", weight:0, valueMin:10000000,  valueMax:50000000 },
+  { id:"cosmic",      label:"Cosmic",          css:"cosmic",      color:"#bf00ff", weight:0, valueMin:100000000, valueMax:500000000 },
+  { id:"singularity", label:"Singularity",     css:"singularity", color:"#ffffff", weight:0, valueMin:1000000000,valueMax:5000000000 },
 ];
 const RARITY_INDEX = {};
 RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
@@ -270,10 +274,38 @@ const CONTRABAND_DB = [
   { id:"cb8", name:"AWP | Kingmaker", weapon:"AWP", suffix:"Kingmaker", rarity:"contraband", icon:"🌠", value:900000 },
 ];
 
+const MYTHICAL_DB = [
+  { id:"my1", name:"★ Karambit | Godfire",          weapon:"Karambit",        suffix:"Godfire",          rarity:"mythical",    icon:"🔥", value:1500000 },
+  { id:"my2", name:"AWP | Armageddon",               weapon:"AWP",             suffix:"Armageddon",       rarity:"mythical",    icon:"💥", value:2000000 },
+  { id:"my3", name:"★ Butterfly Knife | Soulreaper", weapon:"Butterfly Knife", suffix:"Soulreaper",       rarity:"mythical",    icon:"💀", value:2500000 },
+  { id:"my4", name:"AK-47 | Oblivion",               weapon:"AK-47",           suffix:"Oblivion",         rarity:"mythical",    icon:"🌑", value:3000000 },
+  { id:"my5", name:"★ M9 Bayonet | Hellbrand",       weapon:"M9 Bayonet",      suffix:"Hellbrand",        rarity:"mythical",    icon:"🔱", value:4500000 },
+];
+const DIVINE_DB = [
+  { id:"dv1", name:"★ Karambit | Celestial Wrath",   weapon:"Karambit",        suffix:"Celestial Wrath",  rarity:"divine",      icon:"⚡", value:12000000 },
+  { id:"dv2", name:"AWP | Heaven's Gate",             weapon:"AWP",             suffix:"Heaven's Gate",    rarity:"divine",      icon:"🌤️", value:18000000 },
+  { id:"dv3", name:"★ Butterfly Knife | Seraphim",    weapon:"Butterfly Knife", suffix:"Seraphim",         rarity:"divine",      icon:"👼", value:25000000 },
+  { id:"dv4", name:"AK-47 | God Emperor",             weapon:"AK-47",           suffix:"God Emperor",      rarity:"divine",      icon:"👑", value:40000000 },
+];
+const COSMIC_DB = [
+  { id:"cos1", name:"★ Karambit | Event Horizon",    weapon:"Karambit",        suffix:"Event Horizon",    rarity:"cosmic",      icon:"🌌", value:150000000 },
+  { id:"cos2", name:"AWP | Dark Matter",              weapon:"AWP",             suffix:"Dark Matter",      rarity:"cosmic",      icon:"🕳️", value:250000000 },
+  { id:"cos3", name:"★ Butterfly Knife | Supernova",  weapon:"Butterfly Knife", suffix:"Supernova",        rarity:"cosmic",      icon:"💫", value:400000000 },
+];
+const SINGULARITY_DB = [
+  { id:"sg1", name:"★ Karambit | The Singularity",   weapon:"Karambit",        suffix:"The Singularity",  rarity:"singularity", icon:"🌀", value:2000000000 },
+  { id:"sg2", name:"AWP | End of Everything",         weapon:"AWP",             suffix:"End of Everything",rarity:"singularity", icon:"✨", value:3500000000 },
+  { id:"sg3", name:"★ Butterfly Knife | Big Bang",    weapon:"Butterfly Knife", suffix:"Big Bang",         rarity:"singularity", icon:"💠", value:5000000000 },
+];
+
 function allSkinsForRarity(rarityId){
   if(rarityId==="knife") return KNIFE_DB;
   if(rarityId==="exclusive") return EXCLUSIVE_DB;
   if(rarityId==="contraband") return CONTRABAND_DB;
+  if(rarityId==="mythical") return MYTHICAL_DB;
+  if(rarityId==="divine") return DIVINE_DB;
+  if(rarityId==="cosmic") return COSMIC_DB;
+  if(rarityId==="singularity") return SINGULARITY_DB;
   return SKIN_DB[rarityId] || [];
 }
 
@@ -466,7 +498,7 @@ function defaultState(){
       rouletteWon:0,
       roulettePlayed:0,
       skinsSold:0,
-      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0 },
+      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0, mythical:0, divine:0, cosmic:0, singularity:0 },
       crashesPlayed:0,
       crashesWon:0,
       stickersApplied:0,
@@ -979,6 +1011,8 @@ function renderCases(){
       ${rarityStripHTML(c.oddsBoost)}
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Case</button>
+      <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
+      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
     </div>
   `).join("");
 }
@@ -991,6 +1025,8 @@ function renderKnifeCases(){
       <div class="case-price">${formatMoney(c.price)}</div>
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Crate</button>
+      <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
+      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
     </div>
   `).join("");
 }
@@ -1007,6 +1043,8 @@ function renderLimitedCases(){
       ${rarityStripHTML(c.oddsBoost)}
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Case</button>
+      <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
+      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
     </div>`;
 }
 
@@ -1019,12 +1057,18 @@ function caseDefById(caseId, kind){
 
 function caseGridClickHandler(kind){
   return e=>{
-    const btn = e.target.closest(".open-case-btn");
+    const openBtn = e.target.closest(".open-case-btn");
+    const multiBtn = e.target.closest(".multi-open-btn");
+    const autoBtn = e.target.closest(".auto-open-btn");
     const card = e.target.closest(".case-card");
     if(!card) return;
-    if(btn){
-      if(btn.disabled) return;
+    if(openBtn){
+      if(openBtn.disabled) return;
       openCaseFlow(card.dataset.case, kind);
+    } else if(multiBtn){
+      openMultipleCases(card.dataset.case, kind);
+    } else if(autoBtn){
+      toggleAutoOpen(card.dataset.case, kind, autoBtn);
     } else {
       openCasePreview(card.dataset.case, kind);
     }
@@ -1126,6 +1170,118 @@ document.getElementById("casePreviewModal").addEventListener("click", e=>{
    CASE OPENING FLOW
    ============================================================ */
 let isOpening = false;
+let autoOpenInterval = null;
+
+function resolveOneCaseResult(caseDef, kind){
+  let resultSkin;
+  if(kind==="knife"){
+    const exclusiveMult = caseDef.exclusiveChanceMult||1;
+    const exclusiveChance = 0.01 * exclusiveMult * (1+STATE.upgrades.luck*0.1);
+    if(Math.random() < exclusiveChance){ resultSkin = pickSkinFromRarity("exclusive"); }
+    else { resultSkin = pickSkinFromRarity("knife"); }
+  } else if(kind==="limited"){
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
+    const roll = Math.random();
+    if(roll < cbChance * 0.00000000001){ resultSkin = pickSkinFromRarity("singularity"); }
+    else if(roll < cbChance * 0.0000001){ resultSkin = pickSkinFromRarity("cosmic"); }
+    else if(roll < cbChance * 0.00001){ resultSkin = pickSkinFromRarity("divine"); }
+    else if(roll < cbChance * 0.001){ resultSkin = pickSkinFromRarity("mythical"); }
+    else if(roll < cbChance){ resultSkin = pickSkinFromRarity("contraband"); }
+    else { const rarityId = weightedPickRarity(caseDef.oddsBoost, 0); resultSkin = pickSkinFromRarity(rarityId==="contraband"?"exclusive":rarityId); }
+  } else {
+    const rarityId = weightedPickRarity(caseDef.oddsBoost, 0);
+    resultSkin = pickSkinFromRarity(rarityId);
+  }
+  return resultSkin;
+}
+
+const MULTI_OPEN_COST = 1_000_000_000;
+const MULTI_OPEN_COUNT = 10;
+
+function openMultipleCases(caseId, kind){
+  if(isOpening) return;
+  const caseDef = caseDefById(caseId, kind);
+  if(!caseDef) return;
+  const totalCost = MULTI_OPEN_COST;
+  if(STATE.money < totalCost){ toast("❌ Multi-Open costs $1B"); return; }
+  STATE.money -= totalCost;
+  STATE.stats.totalSpent += totalCost;
+  updateTopbar();
+  const results = [];
+  for(let i=0;i<MULTI_OPEN_COUNT;i++){
+    const skin = resolveOneCaseResult(caseDef, kind);
+    const item = addToInventory(skin);
+    STATE.stats.casesOpened++;
+    results.push(item);
+  }
+  saveState(true);
+  checkAchievements();
+  showMultiOpenResults(results);
+  if(kind==="free") renderCases();
+}
+
+function showMultiOpenResults(items){
+  const overlay = document.getElementById("openOverlay");
+  const reel = document.getElementById("reel");
+  const resultBox = document.getElementById("openResult");
+  const card = document.getElementById("resultCard");
+  reel.innerHTML = "";
+  reel.style.transform = "";
+  resultBox.classList.remove("hidden");
+  overlay.classList.remove("hidden");
+  items.sort((a,b)=>RARITY_INDEX[b.rarity]-RARITY_INDEX[a.rarity]);
+  card.className = "result-card multi-open-result";
+  card.style.removeProperty("--ri-color");
+  card.innerHTML = `<div style="font-size:1.1em;margin-bottom:10px;color:#fff;">📦 ${items.length} Cases Opened</div>` +
+    items.map(it=>{
+      const meta = rarityMeta(it.rarity);
+      return `<div class="multi-result-row rarity-${meta.css}" style="--ri-color:${meta.color}">
+        <span>${it.icon||"🔫"}</span>
+        <span style="flex:1;text-align:left;margin-left:8px;">${it.name}</span>
+        <span style="color:${meta.color};font-size:.78em;">${meta.label}</span>
+        <span style="color:#aaffaa;margin-left:8px;">${formatMoney(it.value)}</span>
+      </div>`;
+    }).join("");
+  const cx = window.innerWidth/2, cy = window.innerHeight/2-40;
+  burstParticles(cx, cy, "#ffd700", 80);
+}
+
+function toggleAutoOpen(caseId, kind, btn){
+  if(autoOpenInterval){
+    clearInterval(autoOpenInterval);
+    autoOpenInterval = null;
+    btn.textContent = "⏩ Auto Open";
+    btn.classList.remove("danger");
+    return;
+  }
+  btn.textContent = "⏹ Stop Auto";
+  btn.classList.add("danger");
+  const runOne = ()=>{
+    const caseDef = caseDefById(caseId, kind);
+    if(!caseDef || STATE.money < caseDef.price){
+      clearInterval(autoOpenInterval);
+      autoOpenInterval = null;
+      btn.textContent = "⏩ Auto Open";
+      btn.classList.remove("danger");
+      toast("⏹ Auto-open stopped (not enough money)");
+      return;
+    }
+    if(isOpening) return;
+    STATE.money -= caseDef.price;
+    STATE.stats.totalSpent += caseDef.price;
+    const skin = resolveOneCaseResult(caseDef, kind);
+    const item = addToInventory(skin);
+    STATE.stats.casesOpened++;
+    updateTopbar();
+    if(RARITY_INDEX[skin.rarity]>=6){
+      toast(`✨ Auto-open: ${skin.name} (${rarityMeta(skin.rarity).label}) — ${formatMoney(item.value)}`);
+      if(RARITY_INDEX[skin.rarity]>=9) broadcastRareEvent(`🌍 ${STATE.username} auto-opened <b>${skin.name}</b> (${rarityMeta(skin.rarity).label}) worth ${formatMoney(item.value)}!`);
+    }
+    saveState(false);
+    checkAchievements();
+  };
+  autoOpenInterval = setInterval(runOne, 400);
+}
 
 function openCaseFlow(caseId, kind){
   if(isOpening) return;
@@ -1151,9 +1307,19 @@ function openCaseFlow(caseId, kind){
       resultSkin = pickSkinFromRarity("knife");
     }
   } else if(kind==="limited"){
-    // the only path that can ever produce a Contraband-tier drop
+    // the only path that can ever produce a Contraband-tier or higher drop
     const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
-    if(Math.random() < cbChance){
+    const roll = Math.random();
+    // Ultra-rare tiers — each is a fraction of the contraband chance
+    if(roll < cbChance * 0.00000000001){
+      resultSkin = pickSkinFromRarity("singularity");
+    } else if(roll < cbChance * 0.0000001){
+      resultSkin = pickSkinFromRarity("cosmic");
+    } else if(roll < cbChance * 0.00001){
+      resultSkin = pickSkinFromRarity("divine");
+    } else if(roll < cbChance * 0.001){
+      resultSkin = pickSkinFromRarity("mythical");
+    } else if(roll < cbChance){
       resultSkin = pickSkinFromRarity("contraband");
     } else {
       const rarityId = weightedPickRarity(caseDef.oddsBoost, 0);
@@ -1314,7 +1480,8 @@ function showResultCard(item){
 
   // extremely rare drops get broadcast to every signed-in player
   if(rIdx>=7){
-    broadcastRareEvent(`🌍 ${STATE.username} just unboxed <b>${item.name}</b> (${meta.label}) worth ${formatMoney(item.value)}!`);
+    const tierEmoji = rIdx>=12?"🌀":rIdx>=11?"💫":rIdx>=10?"⚡":rIdx>=9?"🔥":"🌍";
+    broadcastRareEvent(`${tierEmoji} ${STATE.username} just unboxed <b>${item.name}</b> (${meta.label}) worth ${formatMoney(item.value)}!`);
   }
 }
 
@@ -2062,6 +2229,8 @@ document.getElementById("jackpotJoinBtn").addEventListener("click", ()=>{
       toast(`💀 ${winner.name} won the pot.`);
       sfx("lose");
     }
+    const ballIdx = activePlinkoBalls.indexOf(ball);
+    if(ballIdx>=0) activePlinkoBalls.splice(ballIdx,1);
     updateTopbar();
     checkAchievements();
     saveState(true);
@@ -2350,6 +2519,7 @@ const PLINKO_RISK_TABLES = {
 const plinkoCanvas = document.getElementById("plinkoCanvas");
 const plinkoCtx = plinkoCanvas.getContext("2d");
 let plinkoRunning = false;
+const activePlinkoBalls = [];
 
 function resizePlinkoCanvas(){
   const rect = plinkoCanvas.parentElement.getBoundingClientRect();
@@ -2407,6 +2577,14 @@ function drawPlinkoBoard(ball){
       plinkoCtx.fill();
     });
   });
+  // render all active balls
+  activePlinkoBalls.forEach(b=>{
+    const grad = plinkoCtx.createRadialGradient(b.x,b.y,0,b.x,b.y,9);
+    grad.addColorStop(0,"#fff8e0"); grad.addColorStop(1,"#f2a93b");
+    plinkoCtx.fillStyle = grad;
+    plinkoCtx.beginPath(); plinkoCtx.arc(b.x, b.y, 7, 0, Math.PI*2); plinkoCtx.fill();
+    plinkoCtx.save(); plinkoCtx.shadowColor="#f2a93b"; plinkoCtx.shadowBlur=16; plinkoCtx.fill(); plinkoCtx.restore();
+  });
   if(ball){
     const grad = plinkoCtx.createRadialGradient(ball.x,ball.y,0,ball.x,ball.y,9);
     grad.addColorStop(0,"#fff8e0");
@@ -2427,7 +2605,6 @@ function drawPlinkoBoard(ball){
 // binomial random walk: at each of the 12 rows the ball bounces left(0)
 // or right(1) off a peg with 50/50 odds, landing in slot = sum of rights.
 function plinkoDrop(){
-  if(plinkoRunning) return;
   const betInput = document.getElementById("plinkoBet");
   const bet = Math.floor(Number(betInput.value));
   if(!bet || bet<1){ toast("❌ Enter a valid bet"); return; }
@@ -2438,8 +2615,6 @@ function plinkoDrop(){
   STATE.money -= bet;
   STATE.stats.totalSpent += bet;
   updateTopbar();
-  plinkoRunning = true;
-  document.getElementById("plinkoDropBtn").disabled = true;
 
   const moves = [];
   let slot = 0;
@@ -2452,6 +2627,7 @@ function plinkoDrop(){
   const board = plinkoPegPositions();
   const w = plinkoCanvas.width, h = plinkoCanvas.height;
   const ball = { x:w/2, y:board.marginTop-14 };
+  activePlinkoBalls.push(ball);
   let row = 0;
   const rowGap = board.rowGap;
 
@@ -2526,8 +2702,7 @@ function plinkoDrop(){
     updateTopbar();
     checkAchievements();
     saveState(true);
-    plinkoRunning = false;
-    document.getElementById("plinkoDropBtn").disabled = false;
+
   }
 
   stepRow();
