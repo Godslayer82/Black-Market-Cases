@@ -475,6 +475,14 @@ const UPGRADE_DEFS = {
   singularity_boost: { name:"Singularity Drive",        icon:"🌀",  desc:"Multiplies everything — generators, luck, and rewards — by 5× per level.",  base:1e21,   growth:3.0,  max:15,  tier:5 },
   omnipotence:       { name:"Omnipotence",              icon:"👁️", desc:"Grants a 1% chance per level of ANY case drop being Transcendent-tier.",     base:1e24,   growth:3.5,  max:10,  tier:5 },
   infinite_wealth:   { name:"Infinite Wealth",          icon:"♾️",  desc:"Passive income from nothing — earns 0.1% of your net worth per tick.",       base:1e27,   growth:4.0,  max:10,  tier:5 },
+  // ── TIER 6: Cosmic Ascension (for the truly loaded — 1e60+ net worth) ──────
+  auto_broker:       { name:"Auto-Broker",              icon:"🤖",  desc:"Each level automatically buys 1 more of the cheapest affordable generator, every second — for free labor that never sleeps.", base:1e60,  growth:3.2, max:10, tier:6 },
+  plinko_singularity:{ name:"Plinko Singularity",       icon:"🟣",  desc:"Warps the Plinko board itself — a massive extra multiplier on every payout, stacking with Rigged Rig.", base:1e58,  growth:3.4, max:20, tier:6 },
+  reality_echo:      { name:"Reality Echo",             icon:"🔁",  desc:"Each level grants a small chance, every second, of an echo windfall: an instant +10% of your current money.", base:1e62, growth:3.6, max:15, tier:6 },
+  // ── TIER 7: The Void Beyond (for the obscenely wealthy — 1e100+ net worth) ─
+  interest_engine:   { name:"Interest Engine",          icon:"📈",  desc:"Your fortune compounds like interest — earns an extra 0.02% of your current money per level, every second.", base:1e100, growth:4.5, max:20, tier:7 },
+  dimension_split:   { name:"Dimensional Split",        icon:"🌌",  desc:"Each level grants a small chance, every second, of a random owned generator splitting into an identical free clone.", base:1e110, growth:5.0, max:15, tier:7 },
+  omega_multiplier:  { name:"Omega Multiplier",         icon:"Ω",   desc:"The final lever. Multiplies ALL income and sell prices by 100× per level.", base:1e150, growth:8.0, max:5, tier:7 },
 };
 
 /* ---------------- GENERATORS ---------------- */
@@ -516,6 +524,8 @@ const ACHIEVEMENT_DEFS = [
   { id:"rich_100m", icon:"💵", name:"Tycoon", desc:"Earn a total of $100,000,000.", check:s=>s.stats.totalEarned>=100000000 },
   { id:"rich_1b", icon:"🏦", name:"Billionaire", desc:"Earn a total of $1,000,000,000.", check:s=>s.stats.totalEarned>=1000000000 },
   { id:"rich_1t", icon:"🌍", name:"Trillion-Dollar Empire", desc:"Earn a total of $1,000,000,000,000.", check:s=>s.stats.totalEarned>=1000000000000 },
+  { id:"rich_1e60", icon:"🌠", name:"Cosmic Fortune", desc:"Earn a total of $1 Novemdecillion (1e60).", check:s=>s.stats.totalEarned>=1e60 },
+  { id:"rich_1e100", icon:"🕳️", name:"Beyond Comprehension", desc:"Earn a total of 1e100 — a googol dollars.", check:s=>s.stats.totalEarned>=1e100 },
   { id:"first_tradeup", icon:"🔄", name:"Upgrader", desc:"Complete a trade-up contract.", check:s=>s.stats.tradeUps>=1 },
   { id:"first_jackpot", icon:"🎰", name:"High Roller", desc:"Win a jackpot round.", check:s=>s.stats.jackpotsWon>=1 },
   { id:"gen_owner", icon:"🏭", name:"Investor", desc:"Buy your first generator.", check:s=>Object.values(s.generators).some(lvl=>lvl>0) },
@@ -541,7 +551,7 @@ function defaultState(){
     avatarUrl:"", // optional custom profile picture, direct image link
     money:200,
     inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
-    upgrades:{ luck:0, speed:0, reward:0, genBoost:0, contrabandLuck:0, plinkoBoost:0, stickerDeal:0, case_efficiency:0, black_market_tax:0, lucky_streak:0, shadow_broker:0, hyper_gen:0, void_luck:0, temporal_boost:0, dark_energy:0, quantum_reward:0, reality_fracture:0, entropy_engine:0, singularity_boost:0, omnipotence:0, infinite_wealth:0 },
+    upgrades:{ luck:0, speed:0, reward:0, genBoost:0, contrabandLuck:0, plinkoBoost:0, stickerDeal:0, case_efficiency:0, black_market_tax:0, lucky_streak:0, shadow_broker:0, hyper_gen:0, void_luck:0, temporal_boost:0, dark_energy:0, quantum_reward:0, reality_fracture:0, entropy_engine:0, singularity_boost:0, omnipotence:0, infinite_wealth:0, auto_broker:0, plinko_singularity:0, reality_echo:0, interest_engine:0, dimension_split:0, omega_multiplier:0 },
     autoOpenUnlocked: false,
     autoSellUnlocked: false,
     autoStickerUnlocked: false,
@@ -687,7 +697,13 @@ window.getPublicProfileSnapshot = function(){
    ============================================================ */
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 
-const MONEY_SUFFIXES = ["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc"];
+// Named suffixes run up through Vigintillion (1e63) — comfortably past
+// the Cosmic Ascension tier of upgrades. Anything bigger (Tier 7 costs,
+// and any net worth beyond that) switches to scientific notation, which
+// scales cleanly all the way up to 1e300+ without ever overflowing.
+const MONEY_SUFFIXES = ["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc",
+  "Ud","Dd","Td","Qad","Qid","Sxd","Spd","Ocd","Nod","Vg"];
+const MONEY_NAMED_MAX = Math.pow(10, MONEY_SUFFIXES.length*3); // 1e66 — first value that needs scientific notation
 function formatMoney(n){
   const sign = n<0 ? "-" : "";
   n = Math.abs(n);
@@ -695,11 +711,17 @@ function formatMoney(n){
     n = Math.round(n*100)/100;
     return sign + "$" + n.toLocaleString(undefined,{maximumFractionDigits:2});
   }
-  let tier = Math.floor(Math.log10(n)/3);
-  tier = Math.min(tier, MONEY_SUFFIXES.length-1);
-  const scaled = n / Math.pow(1000, tier);
-  const decimals = scaled<10 ? 2 : scaled<100 ? 1 : 0;
-  return sign + "$" + scaled.toFixed(decimals) + MONEY_SUFFIXES[tier];
+  if(n < MONEY_NAMED_MAX){
+    let tier = Math.floor(Math.log10(n)/3);
+    tier = Math.min(tier, MONEY_SUFFIXES.length-1);
+    const scaled = n / Math.pow(1000, tier);
+    const decimals = scaled<10 ? 2 : scaled<100 ? 1 : 0;
+    return sign + "$" + scaled.toFixed(decimals) + MONEY_SUFFIXES[tier];
+  }
+  // Scientific notation for anything from Vigintillion up to 1e300+.
+  const exp = Math.floor(Math.log10(n));
+  const mantissa = n / Math.pow(10, exp);
+  return sign + "$" + mantissa.toFixed(2) + "e+" + exp;
 }
 
 function rarityMeta(id){ return RARITIES[RARITY_INDEX[id]]; }
@@ -740,7 +762,8 @@ function rewardMultiplier(){
   const shadowBroker = 1 + (STATE.upgrades.shadow_broker||0)*0.15;
   const quantum = Math.pow(2, STATE.upgrades.quantum_reward||0);
   const singularity = Math.pow(5, STATE.upgrades.singularity_boost||0);
-  return base * shadowBroker * quantum * singularity;
+  const omega = Math.pow(100, STATE.upgrades.omega_multiplier||0);
+  return base * shadowBroker * quantum * singularity * omega;
 }
 
 /* ============================================================
@@ -1127,7 +1150,8 @@ function totalIncomePerSec(){
   const singularityMult = Math.pow(5, STATE.upgrades.singularity_boost||0);
   const netWorth = STATE.money + STATE.inventory.reduce((s,i)=>s+(i.value||0),0);
   const infiniteWealth = netWorth * (STATE.upgrades.infinite_wealth||0) * 0.001;
-  return total * rewardMultiplier() * (1 + (STATE.upgrades.genBoost||0)*0.15) * hyperMult * singularityMult + infiniteWealth;
+  const interest = STATE.money * (STATE.upgrades.interest_engine||0) * 0.0002;
+  return total * rewardMultiplier() * (1 + (STATE.upgrades.genBoost||0)*0.15) * hyperMult * singularityMult + infiniteWealth + interest;
 }
 
 /* ============================================================
@@ -1825,6 +1849,28 @@ document.getElementById("sellAllJunkBtn").addEventListener("click", ()=>{
   saveState(true);
 });
 
+document.getElementById("sellAllBtn").addEventListener("click", ()=>{
+  // Sells the ENTIRE inventory, any rarity — favorited/pinned items are
+  // always excluded, same protection as Sell All Consumer.
+  const sellable = STATE.inventory.filter(i=>!STATE.favorites.includes(i.uid));
+  if(!sellable.length){ toast("No sellable items (favorites are excluded)"); return; }
+  let total = 0;
+  sellable.forEach(item=>{ total += Math.round(marketValue(item)*0.65*rewardMultiplier()); });
+  if(!confirm(`Sell all ${sellable.length} non-favorited items for ${formatMoney(total)}? This cannot be undone.`)) return;
+  const sellUids = new Set(sellable.map(i=>i.uid));
+  STATE.inventory = STATE.inventory.filter(i=>!sellUids.has(i.uid));
+  STATE.pinned = STATE.pinned.filter(u=>!sellUids.has(u));
+  STATE.money += total;
+  STATE.stats.totalEarned += total;
+  STATE.stats.skinsSold += sellable.length;
+  toast(`💰 Sold ${sellable.length} items for ${formatMoney(total)}`);
+  sfx("buy");
+  updateTopbar();
+  renderInventory();
+  checkAchievements();
+  saveState(true);
+});
+
 /* ============================================================
    FAVORITES / WISHLIST
    ============================================================ */
@@ -2233,8 +2279,8 @@ document.getElementById("executeTradeupBtn").addEventListener("click", ()=>{
    ============================================================ */
 function renderUpgrades(){
   const grid = document.getElementById("upgradesGrid");
-  const tierLabels = {1:"⚔️ Early Game",2:"🏴 Mid Game",3:"🌌 Late Game",4:"⚛️ End Game",5:"👁️ God Tier"};
-  const tierColors = {1:"#4b69ff",2:"#d32ce6",3:"#bf00ff",4:"#00eaff",5:"#ffffff"};
+  const tierLabels = {1:"⚔️ Early Game",2:"🏴 Mid Game",3:"🌌 Late Game",4:"⚛️ End Game",5:"👁️ God Tier",6:"🌠 Cosmic Ascension",7:"🕳️ The Void Beyond"};
+  const tierColors = {1:"#4b69ff",2:"#d32ce6",3:"#bf00ff",4:"#00eaff",5:"#ffffff",6:"#ff9100",7:"#00ffcc"};
   let lastTier = 0;
   grid.innerHTML = Object.keys(UPGRADE_DEFS).map(key=>{
     const def = UPGRADE_DEFS[key];
@@ -2383,14 +2429,62 @@ document.getElementById("generatorsGrid").addEventListener("click", e=>{
   saveState(true);
 });
 
+/* ============================================================
+   COSMIC / VOID TICK EFFECTS  (Tier 6 & 7 upgrades)
+   These are the wild, chance-based, non-generator effects for
+   players deep into the 1e60+ / 1e100+ net worth range — reality
+   echoes, generator cloning, and a tireless auto-buying broker.
+   ============================================================ */
+function runCosmicTickEffects(){
+  // Reality Echo — small chance per second for an instant windfall
+  // equal to a slice of your current fortune.
+  const echoLvl = STATE.upgrades.reality_echo||0;
+  if(echoLvl>0 && Math.random() < echoLvl*0.001){
+    const bonus = STATE.money*0.10;
+    if(bonus>0){
+      STATE.money += bonus;
+      STATE.stats.totalEarned += bonus;
+      toast(`🔁 Reality Echo! +${formatMoney(bonus)} out of nowhere`);
+      sfx("reveal_rare");
+    }
+  }
+  // Dimensional Split — small chance per second for a random owned
+  // generator to spontaneously clone itself, for free.
+  const splitLvl = STATE.upgrades.dimension_split||0;
+  if(splitLvl>0 && Math.random() < splitLvl*0.001){
+    const owned = Object.keys(STATE.generators).filter(k=>(STATE.generators[k]||0)>0);
+    if(owned.length){
+      const key = owned[Math.floor(Math.random()*owned.length)];
+      STATE.generators[key]++;
+      toast(`🌌 Dimensional Split! A free ${GENERATOR_DEFS[key].name} split into existence`);
+      sfx("buy");
+    }
+  }
+  // Auto-Broker — automatically buys the N cheapest affordable
+  // generators every second, where N is the upgrade's level.
+  const brokerLvl = STATE.upgrades.auto_broker||0;
+  for(let i=0;i<brokerLvl;i++){
+    let cheapestKey = null, cheapestCost = Infinity;
+    Object.keys(GENERATOR_DEFS).forEach(key=>{
+      const cost = generatorCost(key);
+      if(cost < cheapestCost){ cheapestCost = cost; cheapestKey = key; }
+    });
+    if(cheapestKey===null || cheapestCost > STATE.money) break;
+    STATE.money -= cheapestCost;
+    STATE.stats.totalSpent += cheapestCost;
+    STATE.generators[cheapestKey] = (STATE.generators[cheapestKey]||0)+1;
+  }
+}
+
 // Generator tick loop - runs every second while app is open
 setInterval(()=>{
   const income = totalIncomePerSec();
   if(income>0){
     STATE.money += income;
     STATE.stats.totalEarned += income;
-    updateTopbar();
   }
+  runCosmicTickEffects();
+  updateTopbar();
 }, 1000);
 
 // Offline earnings on load (capped at 8 hours)
@@ -2829,7 +2923,7 @@ function resizePlinkoCanvas(){
 window.addEventListener("resize", resizePlinkoCanvas);
 
 function plinkoBoostMult(){
-  return 1 + (STATE.upgrades.plinkoBoost||0)*0.08;
+  return 1 + (STATE.upgrades.plinkoBoost||0)*0.08 + (STATE.upgrades.plinko_singularity||0)*0.6;
 }
 
 function renderPlinkoSlots(){
