@@ -2236,7 +2236,7 @@ function renderUpgrades(){
   const tierLabels = {1:"⚔️ Early Game",2:"🏴 Mid Game",3:"🌌 Late Game",4:"⚛️ End Game",5:"👁️ God Tier"};
   const tierColors = {1:"#4b69ff",2:"#d32ce6",3:"#bf00ff",4:"#00eaff",5:"#ffffff"};
   let lastTier = 0;
-  const cards = Object.keys(UPGRADE_DEFS).map(key=>{
+  grid.innerHTML = Object.keys(UPGRADE_DEFS).map(key=>{
     const def = UPGRADE_DEFS[key];
     const level = STATE.upgrades[key]||0;
     const maxed = level>=def.max;
