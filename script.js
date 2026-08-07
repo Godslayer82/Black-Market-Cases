@@ -2279,7 +2279,7 @@ function renderUpgrades(){
       <button class="btn primary buy-autosticker-btn" ${STATE.autoStickerUnlocked?"disabled":""}>
         ${STATE.autoStickerUnlocked ? "OWNED" : "Buy — "+formatMoney(AUTO_STICKER_SHOP_COST)}
       </button>
-    </div>\`;
+    </div>`;
 }
 
 document.getElementById("upgradesGrid").addEventListener("click", e=>{
