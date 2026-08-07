@@ -207,7 +207,7 @@ async function forceSyncNow(){
   if(!auth.currentUser){ return; }
   try{
     await pushAllToCloud(auth.currentUser.uid);
-    if(window.toast) window.toast("☁️ Cloud save updated");
+    if(window.toast && !window.suppressSaveToast) window.toast("☁️ Cloud save updated");
   }catch(e){
     console.error(e);
     if(window.toast) window.toast("⚠️ Cloud sync failed");

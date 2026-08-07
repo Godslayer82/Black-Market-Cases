@@ -161,6 +161,17 @@
       <button id="stickerShopBtn" class="btn small">🎫 Sticker Shop</button>
       <button id="bulkModeBtn" class="btn small">☑️ Select Multiple</button>
       <button id="sellAllJunkBtn" class="btn danger small">Sell All Consumer</button>
+      <span id="autoSellControls" class="hidden">
+        <label style="font-size:.78em;color:var(--text-dim);margin-left:6px;">💸 Auto-Sell up to:</label>
+        <select id="autoSellRaritySelect" style="font-size:.78em;padding:2px 6px;background:var(--panel2);color:var(--text);border:1px solid #444;border-radius:6px;">
+          <option value="consumer">Consumer</option>
+          <option value="industrial">Industrial</option>
+          <option value="milspec">Mil-Spec</option>
+          <option value="restricted">Restricted</option>
+          <option value="classified">Classified</option>
+          <option value="covert">Covert</option>
+        </select>
+      </span>
     </div>
     <div class="inv-summary" id="invSummary"></div>
     <div class="bulk-bar hidden" id="bulkBar">

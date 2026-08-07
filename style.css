@@ -35,6 +35,11 @@
   --c-divine:#00eaff;
   --c-cosmic:#bf00ff;
   --c-singularity:#ffffff;
+  --c-celestial:#ffe066;
+  --c-abyssal:#00ff88;
+  --c-ethereal:#ff44cc;
+  --c-godlike:#ff0000;
+  --c-transcendent:#aaffff;
 
   --f-display:'Arial Narrow',"Helvetica Neue",Arial,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
@@ -241,16 +246,16 @@ h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;}
 
 /* ---- animated skins / ambient special effects on rare cards ---- */
 .rarity-classified .skin-icon svg,.rarity-covert .skin-icon svg,
-.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,.rarity-mythical .skin-icon svg,.rarity-divine .skin-icon svg,.rarity-cosmic .skin-icon svg,.rarity-singularity .skin-icon svg,
+.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,.rarity-mythical .skin-icon svg,.rarity-divine .skin-icon svg,.rarity-cosmic .skin-icon svg,.rarity-singularity .skin-icon svg,.rarity-celestial .skin-icon svg,.rarity-abyssal .skin-icon svg,.rarity-ethereal .skin-icon svg,.rarity-godlike .skin-icon svg,.rarity-transcendent .skin-icon svg,
 .rarity-classified .ri-icon svg,.rarity-covert .ri-icon svg,
-.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg,.rarity-mythical .ri-icon svg,.rarity-divine .ri-icon svg,.rarity-cosmic .ri-icon svg,.rarity-singularity .ri-icon svg{
+.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg,.rarity-mythical .ri-icon svg,.rarity-divine .ri-icon svg,.rarity-cosmic .ri-icon svg,.rarity-singularity .ri-icon svg,.rarity-celestial .ri-icon svg,.rarity-abyssal .ri-icon svg,.rarity-ethereal .ri-icon svg,.rarity-godlike .ri-icon svg,.rarity-transcendent .ri-icon svg{
   animation:skinShimmer 3s ease-in-out infinite;
 }
 @keyframes skinShimmer{
   0%,100%{filter:drop-shadow(0 3px 6px rgba(0,0,0,.55)) brightness(1) saturate(1);}
   50%{filter:drop-shadow(0 3px 10px var(--ri-border,rgba(0,0,0,.55))) brightness(1.2) saturate(1.4);}
 }
-.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after,.rarity-mythical .skin-icon::after,.rarity-divine .skin-icon::after,.rarity-cosmic .skin-icon::after,.rarity-singularity .skin-icon::after{
+.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after,.rarity-mythical .skin-icon::after,.rarity-divine .skin-icon::after,.rarity-cosmic .skin-icon::after,.rarity-singularity .skin-icon::after,.rarity-celestial .skin-icon::after,.rarity-abyssal .skin-icon::after,.rarity-ethereal .skin-icon::after,.rarity-godlike .skin-icon::after,.rarity-transcendent .skin-icon::after{
   content:"";position:absolute;inset:-8px;pointer-events:none;
   background:
     radial-gradient(circle at 26% 22%, rgba(255,255,255,.95), transparent 4%),
@@ -508,8 +513,7 @@ body.legendary-flash::before{
 .roulette-wheel{
   width:100%;height:100%;border-radius:50%;
   background:
-    repeating-conic-gradient(rgba(0,0,0,.18) 0deg 8deg, transparent 8deg 16deg),
-    conic-gradient(var(--crimson) 0deg 160deg, #14151a 160deg 320deg, var(--teal) 320deg 360deg);
+    conic-gradient(#22c55e 0.000deg 9.730deg, #dc2626 9.730deg 19.459deg, #1a1a2e 19.459deg 29.189deg, #dc2626 29.189deg 38.919deg, #1a1a2e 38.919deg 48.649deg, #dc2626 48.649deg 58.378deg, #1a1a2e 58.378deg 68.108deg, #dc2626 68.108deg 77.838deg, #1a1a2e 77.838deg 87.568deg, #dc2626 87.568deg 97.297deg, #1a1a2e 97.297deg 107.027deg, #dc2626 107.027deg 116.757deg, #1a1a2e 116.757deg 126.486deg, #dc2626 126.486deg 136.216deg, #1a1a2e 136.216deg 145.946deg, #dc2626 145.946deg 155.676deg, #1a1a2e 155.676deg 165.405deg, #dc2626 165.405deg 175.135deg, #1a1a2e 175.135deg 184.865deg, #dc2626 184.865deg 194.595deg, #1a1a2e 194.595deg 204.324deg, #dc2626 204.324deg 214.054deg, #1a1a2e 214.054deg 223.784deg, #dc2626 223.784deg 233.514deg, #1a1a2e 233.514deg 243.243deg, #dc2626 243.243deg 252.973deg, #1a1a2e 252.973deg 262.703deg, #dc2626 262.703deg 272.432deg, #1a1a2e 272.432deg 282.162deg, #dc2626 282.162deg 291.892deg, #1a1a2e 291.892deg 301.622deg, #dc2626 301.622deg 311.351deg, #1a1a2e 311.351deg 321.081deg, #dc2626 321.081deg 330.811deg, #1a1a2e 330.811deg 340.541deg, #dc2626 340.541deg 350.270deg, #1a1a2e 350.270deg 360.000deg);
   border:5px solid var(--panel2);transition:transform 3s cubic-bezier(.12,.75,.15,1);
   box-shadow:0 0 0 1px var(--line), var(--shadow-soft), inset 0 0 30px rgba(0,0,0,.4);
 }
@@ -640,6 +644,38 @@ body.legendary-flash::before{
 }
 .text-contraband{color:var(--c-contraband);}
 
+/* ── Upgrade tier headers ───────────────────────────────── */
+.upgrade-tier-header{
+  grid-column:1/-1;padding:10px 16px 6px;font-size:.85em;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--tc,#fff);
+  border-bottom:1px solid var(--tc,#444);margin-top:8px;opacity:.9;
+}
+.upgrade-card.tier-2{border-color:#d32ce640;}
+.upgrade-card.tier-3{border-color:#bf00ff55;background:linear-gradient(135deg,rgba(191,0,255,.06),rgba(0,0,0,.3));}
+.upgrade-card.tier-4{border-color:#00eaff55;background:linear-gradient(135deg,rgba(0,234,255,.07),rgba(0,0,0,.3));}
+.upgrade-card.tier-5{
+  border-color:#ffffff88;
+  background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(191,0,255,.08),rgba(0,234,255,.06));
+  animation:tier5Pulse 3s ease-in-out infinite;
+}
+@keyframes tier5Pulse{
+  0%,100%{box-shadow:0 0 8px rgba(255,255,255,.15);}
+  50%{box-shadow:0 0 20px rgba(255,255,255,.4),0 0 40px rgba(191,0,255,.2);}
+}
+
+/* auto-sell toolbar */
+#autoSellControls{ display:inline-flex; align-items:center; gap:4px; }
+#autoSellControls.hidden{ display:none; }
+
+.upgrade-card.one-time-purchase{
+  border:2px solid #7c3aed;
+  background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(0,0,0,.4));
+}
+.upgrade-card.one-time-purchase.owned{
+  border:2px solid #22c55e;
+  background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(0,0,0,.4));
+}
+
 /* ============================================================
    ULTRA-RARE TIERS
    ============================================================ */
@@ -687,6 +723,66 @@ body.legendary-flash::before{
   50%{box-shadow:0 0 70px rgba(255,255,255,.9),0 0 120px rgba(0,234,255,.5),0 0 160px rgba(191,0,255,.4);}
 }
 .text-singularity{color:#ffffff;text-shadow:0 0 10px rgba(191,0,255,.8);}
+
+.rarity-celestial{
+  --ri-border:#ffe066;
+  box-shadow:0 0 32px rgba(255,224,102,.5);
+  animation:celestialPulse 2s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,224,102,.07),rgba(0,0,0,.35));
+}
+@keyframes celestialPulse{
+  0%,100%{box-shadow:0 0 18px rgba(255,224,102,.3);}
+  50%{box-shadow:0 0 50px rgba(255,224,102,.75);}
+}
+.text-celestial{color:#ffe066;text-shadow:0 0 8px rgba(255,200,0,.6);}
+
+.rarity-abyssal{
+  --ri-border:#00ff88;
+  box-shadow:0 0 36px rgba(0,255,136,.5);
+  animation:abyssalPulse 1.9s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(0,255,136,.07),rgba(0,0,0,.35));
+}
+@keyframes abyssalPulse{
+  0%,100%{box-shadow:0 0 20px rgba(0,255,136,.3);}
+  50%{box-shadow:0 0 55px rgba(0,255,136,.8);}
+}
+.text-abyssal{color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.6);}
+
+.rarity-ethereal{
+  --ri-border:#ff44cc;
+  box-shadow:0 0 40px rgba(255,68,204,.55);
+  animation:etherealPulse 1.7s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,68,204,.08),rgba(0,0,0,.35));
+}
+@keyframes etherealPulse{
+  0%,100%{box-shadow:0 0 22px rgba(255,68,204,.35);}
+  50%{box-shadow:0 0 60px rgba(255,68,204,.85);}
+}
+.text-ethereal{color:#ff44cc;text-shadow:0 0 8px rgba(255,68,204,.6);}
+
+.rarity-godlike{
+  --ri-border:#ff0000;
+  box-shadow:0 0 50px rgba(255,0,0,.65);
+  animation:godlikePulse 1.4s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,0,0,.08),rgba(255,100,0,.05),rgba(0,0,0,.35));
+}
+@keyframes godlikePulse{
+  0%,100%{box-shadow:0 0 28px rgba(255,0,0,.4);}
+  50%{box-shadow:0 0 70px rgba(255,0,0,.9),0 0 120px rgba(255,100,0,.4);}
+}
+.text-godlike{color:#ff4444;text-shadow:0 0 10px rgba(255,0,0,.8);}
+
+.rarity-transcendent{
+  --ri-border:#aaffff;
+  box-shadow:0 0 60px rgba(170,255,255,.7);
+  animation:transcendentPulse 1.2s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(170,255,255,.1),rgba(255,68,204,.06),rgba(255,224,102,.05),rgba(0,0,0,.3));
+}
+@keyframes transcendentPulse{
+  0%,100%{box-shadow:0 0 35px rgba(170,255,255,.5),0 0 70px rgba(255,68,204,.2);}
+  50%{box-shadow:0 0 80px rgba(170,255,255,.95),0 0 150px rgba(191,0,255,.5),0 0 200px rgba(255,224,102,.3);}
+}
+.text-transcendent{color:#aaffff;text-shadow:0 0 12px rgba(170,255,255,.9);}
 
 /* multi-open result card */
 .multi-open-result{

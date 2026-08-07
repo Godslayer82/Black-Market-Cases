@@ -17,11 +17,16 @@ const RARITIES = [
   // Contraband has weight 0 so it can NEVER be selected by the normal
   // weightedPickRarity pool — it is only ever handed out directly by
   // the rotating limited-time case logic further down this file.
-  { id:"contraband",  label:"Contraband",     css:"contraband",  color:"#ff1a1a", weight:0, valueMin:100000,    valueMax:500000 },
-  { id:"mythical",    label:"Mythical",        css:"mythical",    color:"#ff6600", weight:0, valueMin:1000000,   valueMax:5000000 },
-  { id:"divine",      label:"Divine",          css:"divine",      color:"#00eaff", weight:0, valueMin:10000000,  valueMax:50000000 },
-  { id:"cosmic",      label:"Cosmic",          css:"cosmic",      color:"#bf00ff", weight:0, valueMin:100000000, valueMax:500000000 },
-  { id:"singularity", label:"Singularity",     css:"singularity", color:"#ffffff", weight:0, valueMin:1000000000,valueMax:5000000000 },
+  { id:"contraband",  label:"Contraband",     css:"contraband",  color:"#ff1a1a", weight:0, valueMin:100000,         valueMax:500000 },
+  { id:"mythical",    label:"Mythical",        css:"mythical",    color:"#ff6600", weight:0, valueMin:1000000,        valueMax:5000000 },
+  { id:"divine",      label:"Divine",          css:"divine",      color:"#00eaff", weight:0, valueMin:10000000,       valueMax:50000000 },
+  { id:"cosmic",      label:"Cosmic",          css:"cosmic",      color:"#bf00ff", weight:0, valueMin:100000000,      valueMax:500000000 },
+  { id:"singularity", label:"Singularity",     css:"singularity", color:"#ffffff", weight:0, valueMin:1000000000,     valueMax:5000000000 },
+  { id:"celestial",   label:"Celestial",       css:"celestial",   color:"#ffe066", weight:0, valueMin:20000000000,    valueMax:100000000000 },
+  { id:"abyssal",     label:"Abyssal",         css:"abyssal",     color:"#00ff88", weight:0, valueMin:500000000000,   valueMax:2500000000000 },
+  { id:"ethereal",    label:"Ethereal",        css:"ethereal",    color:"#ff44cc", weight:0, valueMin:10000000000000, valueMax:50000000000000 },
+  { id:"godlike",     label:"Godlike",         css:"godlike",     color:"#ff0000", weight:0, valueMin:1e15,           valueMax:1e16 },
+  { id:"transcendent",label:"Transcendent",    css:"transcendent",color:"#aaffff", weight:0, valueMin:1e18,           valueMax:1e19 },
 ];
 const RARITY_INDEX = {};
 RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
@@ -298,6 +303,34 @@ const SINGULARITY_DB = [
   { id:"sg3", name:"★ Butterfly Knife | Big Bang",    weapon:"Butterfly Knife", suffix:"Big Bang",         rarity:"singularity", icon:"💠", value:5000000000 },
 ];
 
+const CELESTIAL_DB = [
+  { id:"ce1", name:"★ Karambit | Stardust Requiem",   weapon:"Karambit",        suffix:"Stardust Requiem",   rarity:"celestial",    icon:"✨", value:25000000000 },
+  { id:"ce2", name:"AWP | Nova Collapse",              weapon:"AWP",             suffix:"Nova Collapse",      rarity:"celestial",    icon:"💥", value:40000000000 },
+  { id:"ce3", name:"★ Butterfly Knife | Helios",       weapon:"Butterfly Knife", suffix:"Helios",             rarity:"celestial",    icon:"☀️", value:60000000000 },
+  { id:"ce4", name:"AK-47 | Astral Phoenix",           weapon:"AK-47",           suffix:"Astral Phoenix",     rarity:"celestial",    icon:"🦅", value:90000000000 },
+];
+const ABYSSAL_DB = [
+  { id:"ab1", name:"★ Karambit | Void Reaper",         weapon:"Karambit",        suffix:"Void Reaper",        rarity:"abyssal",      icon:"💀", value:600000000000 },
+  { id:"ab2", name:"AWP | Deep Abyss",                 weapon:"AWP",             suffix:"Deep Abyss",         rarity:"abyssal",      icon:"🕳️", value:1000000000000 },
+  { id:"ab3", name:"★ Butterfly Knife | Oblivion Pulse",weapon:"Butterfly Knife",suffix:"Oblivion Pulse",     rarity:"abyssal",      icon:"🌑", value:2000000000000 },
+  { id:"ab4", name:"AK-47 | Abyss Walker",             weapon:"AK-47",           suffix:"Abyss Walker",       rarity:"abyssal",      icon:"👁️", value:2400000000000 },
+];
+const ETHEREAL_DB = [
+  { id:"et1", name:"★ Karambit | Phantasm",            weapon:"Karambit",        suffix:"Phantasm",           rarity:"ethereal",     icon:"👻", value:12000000000000 },
+  { id:"et2", name:"AWP | Soul Fragment",               weapon:"AWP",             suffix:"Soul Fragment",      rarity:"ethereal",     icon:"💎", value:20000000000000 },
+  { id:"et3", name:"★ Butterfly Knife | Wraithblade",   weapon:"Butterfly Knife", suffix:"Wraithblade",        rarity:"ethereal",     icon:"🔮", value:40000000000000 },
+];
+const GODLIKE_DB = [
+  { id:"gl1", name:"★ Karambit | Wrath of Gods",       weapon:"Karambit",        suffix:"Wrath of Gods",      rarity:"godlike",      icon:"⚡", value:2000000000000000 },
+  { id:"gl2", name:"AWP | Divine Judgment",             weapon:"AWP",             suffix:"Divine Judgment",    rarity:"godlike",      icon:"☄️", value:5000000000000000 },
+  { id:"gl3", name:"★ Butterfly Knife | Pantheon",      weapon:"Butterfly Knife", suffix:"Pantheon",           rarity:"godlike",      icon:"🏛️", value:9000000000000000 },
+];
+const TRANSCENDENT_DB = [
+  { id:"tr1", name:"★ Karambit | Beyond Reality",      weapon:"Karambit",        suffix:"Beyond Reality",     rarity:"transcendent", icon:"🌌", value:2e18 },
+  { id:"tr2", name:"AWP | The Last Light",              weapon:"AWP",             suffix:"The Last Light",     rarity:"transcendent", icon:"🌟", value:5e18 },
+  { id:"tr3", name:"★ Butterfly Knife | Existence",     weapon:"Butterfly Knife", suffix:"Existence",          rarity:"transcendent", icon:"♾️", value:1e19 },
+];
+
 function allSkinsForRarity(rarityId){
   if(rarityId==="knife") return KNIFE_DB;
   if(rarityId==="exclusive") return EXCLUSIVE_DB;
@@ -306,6 +339,11 @@ function allSkinsForRarity(rarityId){
   if(rarityId==="divine") return DIVINE_DB;
   if(rarityId==="cosmic") return COSMIC_DB;
   if(rarityId==="singularity") return SINGULARITY_DB;
+  if(rarityId==="celestial") return CELESTIAL_DB;
+  if(rarityId==="abyssal") return ABYSSAL_DB;
+  if(rarityId==="ethereal") return ETHEREAL_DB;
+  if(rarityId==="godlike") return GODLIKE_DB;
+  if(rarityId==="transcendent") return TRANSCENDENT_DB;
   return SKIN_DB[rarityId] || [];
 }
 
@@ -411,27 +449,57 @@ function freeCaseAvailable(){
 function upgradeCost(base, level, growth){ return Math.round(base * Math.pow(growth, level)); }
 
 const UPGRADE_DEFS = {
-  luck:      { name:"Better Luck", icon:"🍀", desc:"Increases odds of higher rarities.", base:100, growth:1.6, max:20 },
-  speed:     { name:"Faster Opening", icon:"⚡", desc:"Reduces case opening animation time.", base:80, growth:1.5, max:10 },
-  reward:    { name:"Bigger Rewards", icon:"💎", desc:"Increases sell value & generator income.", base:150, growth:1.7, max:20 },
-  genBoost:  { name:"Operations Efficiency", icon:"🏭", desc:"Further boosts all generator income on top of Bigger Rewards.", base:600, growth:1.8, max:20 },
-  contrabandLuck: { name:"Cartel Connections", icon:"☠️", desc:"Increases the Contraband drop chance in Limited Cases.", base:2500, growth:1.9, max:15 },
-  plinkoBoost: { name:"Rigged Rig", icon:"🟣", desc:"Increases every Plinko payout multiplier.", base:1000, growth:1.75, max:15 },
-  stickerDeal: { name:"Sticker Connect", icon:"🎫", desc:"Discounts every sticker in the Sticker Shop.", base:500, growth:1.7, max:15 },
+  // ── TIER 1: Early Game ───────────────────────────────────────────────────
+  luck:              { name:"Better Luck",              icon:"🍀",  desc:"Increases odds of higher rarities.",                                         base:100,    growth:1.6,  max:50,  tier:1 },
+  speed:             { name:"Faster Opening",           icon:"⚡",  desc:"Reduces case opening animation time.",                                       base:80,     growth:1.5,  max:10,  tier:1 },
+  reward:            { name:"Bigger Rewards",           icon:"💎",  desc:"Increases sell value & generator income.",                                   base:150,    growth:1.7,  max:50,  tier:1 },
+  genBoost:          { name:"Operations Efficiency",    icon:"🏭",  desc:"Further boosts all generator income.",                                       base:600,    growth:1.8,  max:50,  tier:1 },
+  contrabandLuck:    { name:"Cartel Connections",       icon:"☠️", desc:"Increases the Contraband drop chance in Limited Cases.",                     base:2500,   growth:1.9,  max:30,  tier:1 },
+  plinkoBoost:       { name:"Rigged Rig",               icon:"🟣",  desc:"Increases every Plinko payout multiplier.",                                  base:1000,   growth:1.75, max:30,  tier:1 },
+  stickerDeal:       { name:"Sticker Connect",          icon:"🎫",  desc:"Discounts every sticker in the Sticker Shop.",                               base:500,    growth:1.7,  max:15,  tier:1 },
+  // ── TIER 2: Mid Game ─────────────────────────────────────────────────────
+  case_efficiency:   { name:"Case Efficiency",          icon:"📦",  desc:"Each case open has a 5% chance per level to open a 2nd case free.",         base:50000,  growth:2.0,  max:20,  tier:2 },
+  black_market_tax:  { name:"Black Market Tax",         icon:"🏛️", desc:"Passive income trickles in from all sold items — +2% per level.",           base:25000,  growth:1.85, max:25,  tier:2 },
+  lucky_streak:      { name:"Lucky Streak",             icon:"🎲",  desc:"Consecutive opens without a rare increase your odds by 1% per level.",       base:10000,  growth:1.9,  max:20,  tier:2 },
+  shadow_broker:     { name:"Shadow Broker",            icon:"🕵️", desc:"Sell prices increase by 15% per level.",                                     base:75000,  growth:2.0,  max:20,  tier:2 },
+  // ── TIER 3: Late Game ────────────────────────────────────────────────────
+  hyper_gen:         { name:"Hyper Generator",          icon:"🔋",  desc:"Doubles ALL generator income per level.",                                    base:1e12,   growth:2.1,  max:30,  tier:3 },
+  void_luck:         { name:"Void Luck",                icon:"🌌",  desc:"Massively boosts ultra-rare (Mythical+) drop chances.",                      base:1e15,   growth:2.2,  max:20,  tier:3 },
+  temporal_boost:    { name:"Temporal Boost",           icon:"⏱️", desc:"Generators tick 10% faster per level.",                                      base:1e13,   growth:2.0,  max:20,  tier:3 },
+  dark_energy:       { name:"Dark Energy",              icon:"🔯",  desc:"Boosts contraband & mythical odds by 30% per level on top of everything.",   base:1e14,   growth:2.3,  max:20,  tier:3 },
+  // ── TIER 4: End Game ─────────────────────────────────────────────────────
+  quantum_reward:    { name:"Quantum Rewards",          icon:"⚛️", desc:"Each level doubles sell value and generator income.",                         base:1e18,   growth:2.5,  max:20,  tier:4 },
+  reality_fracture:  { name:"Reality Fracture",         icon:"💠",  desc:"5% chance per level to triple any case result's value on unbox.",            base:1e17,   growth:2.4,  max:15,  tier:4 },
+  entropy_engine:    { name:"Entropy Engine",           icon:"🌪️", desc:"Every 100 cases opened grants a permanent +1% income boost (stacks).",       base:1e16,   growth:2.2,  max:25,  tier:4 },
+  // ── TIER 5: God Tier ─────────────────────────────────────────────────────
+  singularity_boost: { name:"Singularity Drive",        icon:"🌀",  desc:"Multiplies everything — generators, luck, and rewards — by 5× per level.",  base:1e21,   growth:3.0,  max:15,  tier:5 },
+  omnipotence:       { name:"Omnipotence",              icon:"👁️", desc:"Grants a 1% chance per level of ANY case drop being Transcendent-tier.",     base:1e24,   growth:3.5,  max:10,  tier:5 },
+  infinite_wealth:   { name:"Infinite Wealth",          icon:"♾️",  desc:"Passive income from nothing — earns 0.1% of your net worth per tick.",       base:1e27,   growth:4.0,  max:10,  tier:5 },
 };
 
 /* ---------------- GENERATORS ---------------- */
 const GENERATOR_DEFS = {
-  street_vendor: { name:"Street Vendor", icon:"🛒", baseCost:50,  growth:1.15, baseIncome:0.5 },
-  fence:         { name:"The Fence", icon:"🕴️", baseCost:400,  growth:1.16, baseIncome:4 },
-  smuggler:      { name:"Smuggler Ring", icon:"🚚", baseCost:3000, growth:1.17, baseIncome:25 },
-  cartel:        { name:"Cartel Operation", icon:"🏭", baseCost:20000,growth:1.18, baseIncome:150 },
-  syndicate:     { name:"Global Syndicate", icon:"🌐", baseCost:150000,growth:1.20, baseIncome:900 },
-  offshore_bank: { name:"Offshore Bank", icon:"🏦", baseCost:1200000, growth:1.21, baseIncome:7000 },
-  private_army:  { name:"Private Army", icon:"⚔️", baseCost:9000000, growth:1.22, baseIncome:50000 },
-  black_exchange:{ name:"Black Exchange", icon:"🪙", baseCost:70000000, growth:1.23, baseIncome:340000 },
-  shadow_corp:   { name:"Shadow Corporation", icon:"🏢", baseCost:550000000, growth:1.24, baseIncome:2400000 },
-  global_monopoly:{ name:"Global Monopoly", icon:"🌍", baseCost:4500000000, growth:1.25, baseIncome:18000000 },
+  street_vendor:   { name:"Street Vendor",         icon:"🛒",  baseCost:50,                growth:1.15, baseIncome:0.5 },
+  fence:           { name:"The Fence",              icon:"🕴️", baseCost:400,               growth:1.16, baseIncome:4 },
+  smuggler:        { name:"Smuggler Ring",          icon:"🚚",  baseCost:3000,              growth:1.17, baseIncome:25 },
+  cartel:          { name:"Cartel Operation",       icon:"🏭",  baseCost:20000,             growth:1.18, baseIncome:150 },
+  syndicate:       { name:"Global Syndicate",       icon:"🌐",  baseCost:150000,            growth:1.20, baseIncome:900 },
+  offshore_bank:   { name:"Offshore Bank",          icon:"🏦",  baseCost:1200000,           growth:1.21, baseIncome:7000 },
+  private_army:    { name:"Private Army",           icon:"⚔️", baseCost:9000000,           growth:1.22, baseIncome:50000 },
+  black_exchange:  { name:"Black Exchange",         icon:"🪙",  baseCost:70000000,          growth:1.23, baseIncome:340000 },
+  shadow_corp:     { name:"Shadow Corporation",     icon:"🏢",  baseCost:550000000,         growth:1.24, baseIncome:2400000 },
+  global_monopoly: { name:"Global Monopoly",        icon:"🌍",  baseCost:4500000000,        growth:1.25, baseIncome:18000000 },
+  dark_nation:     { name:"Dark Nation State",      icon:"🏴",  baseCost:50000000000,       growth:1.26, baseIncome:150000000 },
+  void_network:    { name:"Void Network",           icon:"👁️", baseCost:600000000000,      growth:1.27, baseIncome:1500000000 },
+  quantum_exchange:{ name:"Quantum Exchange",       icon:"⚛️", baseCost:8000000000000,     growth:1.28, baseIncome:15000000000 },
+  galactic_cartel: { name:"Galactic Cartel",        icon:"🌌",  baseCost:120000000000000,   growth:1.29, baseIncome:180000000000 },
+  omniversal_bank: { name:"Omniversal Bank",        icon:"🔮",  baseCost:2000000000000000,  growth:1.30, baseIncome:2500000000000 },
+  singularity_corp:   { name:"Singularity Corp",         icon:"🌀",  baseCost:4e16,   growth:1.31, baseIncome:4e13 },
+  celestial_vault:    { name:"Celestial Vault",          icon:"✨",  baseCost:8e18,   growth:1.32, baseIncome:8e15 },
+  abyssal_forge:      { name:"Abyssal Forge",            icon:"🔥",  baseCost:2e21,   growth:1.33, baseIncome:2e18 },
+  ethereal_exchange:  { name:"Ethereal Exchange",        icon:"👻",  baseCost:6e23,   growth:1.34, baseIncome:6e20 },
+  godlike_empire:     { name:"Godlike Empire",           icon:"⚡",  baseCost:2e26,   growth:1.35, baseIncome:2e23 },
+  transcendent_nexus: { name:"Transcendent Nexus",       icon:"♾️", baseCost:1e29,   growth:1.36, baseIncome:1e26 },
 };
 
 /* ---------------- ACHIEVEMENTS ---------------- */
@@ -473,9 +541,12 @@ function defaultState(){
     avatarUrl:"", // optional custom profile picture, direct image link
     money:200,
     inventory:[], // {uid, skinId, name, weapon, suffix, rarity, icon, value, float, stattrak, pattern, stickers}
-    upgrades:{ luck:0, speed:0, reward:0, genBoost:0, contrabandLuck:0, plinkoBoost:0, stickerDeal:0 },
-    generators:{ street_vendor:0, fence:0, smuggler:0, cartel:0, syndicate:0,
-      offshore_bank:0, private_army:0, black_exchange:0, shadow_corp:0, global_monopoly:0 },
+    upgrades:{ luck:0, speed:0, reward:0, genBoost:0, contrabandLuck:0, plinkoBoost:0, stickerDeal:0, case_efficiency:0, black_market_tax:0, lucky_streak:0, shadow_broker:0, hyper_gen:0, void_luck:0, temporal_boost:0, dark_energy:0, quantum_reward:0, reality_fracture:0, entropy_engine:0, singularity_boost:0, omnipotence:0, infinite_wealth:0 },
+    autoOpenUnlocked: false,
+    autoSellUnlocked: false,
+    autoStickerUnlocked: false,
+    autoSellMinRarity: "consumer", // sell items at or below this rarity
+    generators:{ street_vendor:1, fence:0, smuggler:0, cartel:0, syndicate:0, dark_nation:0, void_network:0, quantum_exchange:0, galactic_cartel:0, omniversal_bank:0, singularity_corp:0, offshore_bank:0, private_army:0, black_exchange:0, shadow_corp:0, global_monopoly:0, celestial_vault:0, abyssal_forge:0, ethereal_exchange:0, godlike_empire:0, transcendent_nexus:0 },
     prestige:{ points:0, count:0 },
     achievementsUnlocked:[],
     lastTick: Date.now(),
@@ -498,7 +569,7 @@ function defaultState(){
       rouletteWon:0,
       roulettePlayed:0,
       skinsSold:0,
-      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0, mythical:0, divine:0, cosmic:0, singularity:0 },
+      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0, mythical:0, divine:0, cosmic:0, singularity:0, celestial:0, abyssal:0, ethereal:0, godlike:0, transcendent:0 },
       crashesPlayed:0,
       crashesWon:0,
       stickersApplied:0,
@@ -516,6 +587,10 @@ function mergeStateWithDefaults(parsed){
   const base = defaultState();
   const merged = Object.assign({}, base, parsed);
   merged.upgrades = Object.assign({}, base.upgrades, parsed.upgrades||{});
+  if(parsed.autoOpenUnlocked) merged.autoOpenUnlocked = true;
+  if(parsed.autoSellUnlocked) merged.autoSellUnlocked = true;
+  if(parsed.autoStickerUnlocked) merged.autoStickerUnlocked = true;
+  if(parsed.autoSellMinRarity) merged.autoSellMinRarity = parsed.autoSellMinRarity;
   merged.generators = Object.assign({}, base.generators, parsed.generators||{});
   merged.prestige = Object.assign({}, base.prestige, parsed.prestige||{});
   merged.stats = Object.assign({}, base.stats, parsed.stats||{});
@@ -548,7 +623,7 @@ function saveState(silent){
     if(window.CloudSync && typeof window.CloudSync.onLocalSave==="function"){
       window.CloudSync.onLocalSave();
     }
-    if(!silent) toast("💾 Game saved");
+    if(!silent && !suppressSaveToast) toast("💾 Game saved");
   }catch(e){
     console.error("Failed to save", e);
     if(!silent) toast("⚠️ Save failed — check your connection");
@@ -561,6 +636,7 @@ function saveState(silent){
 function applyImportedState(parsed, opts){
   opts = opts||{};
   STATE = mergeStateWithDefaults(parsed);
+  setTimeout(syncAutoSellPicker, 0);
   // Cloud restores are silent — there's no local save that could
   // already have accounted for time passed since this was last
   // synced, so credit offline earnings against the cloud's lastTick.
@@ -633,7 +709,9 @@ function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 // Weighted pick with luck skew: luck level raises weight of higher-index rarities
 function weightedPickRarity(oddsBoost, excludeBelow){
   const luckLevel = STATE.upgrades.luck;
-  const luckMult = 1 + luckLevel*0.18; // each level raises rare odds
+  const voidBonus = (STATE.upgrades.void_luck||0)*0.5;
+  const singBonus = (STATE.upgrades.singularity_boost||0)*0.3;
+  const luckMult = 1 + luckLevel*0.18 + voidBonus + singBonus; // each level raises rare odds
   const weights = RARITIES.map((r,i)=>{
     if(excludeBelow!==undefined && i < excludeBelow) return 0;
     let w = r.weight;
@@ -658,7 +736,11 @@ function pickSkinFromRarity(rarityId){
 }
 
 function rewardMultiplier(){
-  return (1 + STATE.upgrades.reward*0.12) * prestigeMultiplier();
+  const base = (1 + STATE.upgrades.reward*0.12) * prestigeMultiplier();
+  const shadowBroker = 1 + (STATE.upgrades.shadow_broker||0)*0.15;
+  const quantum = Math.pow(2, STATE.upgrades.quantum_reward||0);
+  const singularity = Math.pow(5, STATE.upgrades.singularity_boost||0);
+  return base * shadowBroker * quantum * singularity;
 }
 
 /* ============================================================
@@ -768,7 +850,61 @@ function sparklineSeries(skinId, points){
 
 function openAnimDuration(){
   const base = 4200;
-  return Math.max(1200, base - STATE.upgrades.speed*280);
+  const temporalMult = 1 / (1 + (STATE.upgrades.temporal_boost||0)*0.10);
+  return Math.max(200, Math.round((base - STATE.upgrades.speed*280) * temporalMult));
+}
+
+/* ---------- AUTO-SELL ---------- */
+function autoSellCheck(item){
+  if(!STATE.autoSellUnlocked) return;
+  if(STATE.favorites.includes(item.uid)) return;
+  const minRarityIdx = RARITY_INDEX[STATE.autoSellMinRarity] ?? 0;
+  if(RARITY_INDEX[item.rarity] > minRarityIdx) return;
+  // sell it silently
+  const sellValue = Math.round(marketValue(item) * 0.65 * rewardMultiplier());
+  STATE.inventory = STATE.inventory.filter(i=>i.uid!==item.uid);
+  STATE.money += sellValue;
+  STATE.stats.totalEarned += sellValue;
+  STATE.stats.skinsSold++;
+}
+
+/* ---------- AUTO-STICKER ---------- */
+function autoStickerCheck(item){
+  if(!STATE.autoStickerUnlocked) return;
+  if(!item.stickers) item.stickers = [];
+  if(item.stickers.length >= 3) return;
+  const discount = 1 - (STATE.upgrades.stickerDeal||0)*0.03;
+  // pick the best sticker we can afford, up to 3 slots
+  while(item.stickers.length < 3){
+    // find best owned sticker first
+    let bestOwned = null;
+    let bestOwnedBoost = -1;
+    Object.keys(STATE.stickerBag).forEach(id=>{
+      if((STATE.stickerBag[id]||0) > 0){
+        const s = STICKER_INDEX[id];
+        if(s && s.boost > bestOwnedBoost){ bestOwnedBoost = s.boost; bestOwned = id; }
+      }
+    });
+    if(bestOwned){
+      // use from bag
+      STATE.stickerBag[bestOwned]--;
+      if(STATE.stickerBag[bestOwned]<=0) delete STATE.stickerBag[bestOwned];
+      item.stickers.push(bestOwned);
+    } else {
+      // buy the best we can afford
+      let bestAffordable = null;
+      let bestBoost = -1;
+      STICKER_DEFS.forEach(s=>{
+        const price = Math.max(1, Math.round(s.cost * discount));
+        if(STATE.money >= price && s.boost > bestBoost){ bestBoost = s.boost; bestAffordable = s; }
+      });
+      if(!bestAffordable) break; // can't afford any sticker
+      const price = Math.max(1, Math.round(bestAffordable.cost * discount));
+      STATE.money -= price;
+      STATE.stats.totalSpent += price;
+      item.stickers.push(bestAffordable.id);
+    }
+  }
 }
 
 function addToInventory(skin){
@@ -793,6 +929,9 @@ function addToInventory(skin){
   if(!STATE.stats.bestDrop || skin.value > STATE.stats.bestDrop.value){
     STATE.stats.bestDrop = { name:skin.name, value:skin.value, rarity:skin.rarity };
   }
+  // auto-sticker first (boosts value), then auto-sell (may remove it)
+  autoStickerCheck(item);
+  autoSellCheck(item);
   return item;
 }
 
@@ -956,6 +1095,10 @@ function refreshActiveTab(tab){
   if(tab==="inventory") renderInventory();
   if(tab==="tradeup") renderTradeup();
   if(tab==="upgrades") renderUpgrades();
+  if(tab==="inventory"){
+    const asc = document.getElementById("autoSellControls");
+    if(asc){ if(STATE.autoSellUnlocked) asc.classList.remove("hidden"); else asc.classList.add("hidden"); }
+  }
   if(tab==="generators") renderGenerators();
   if(tab==="prestige") renderPrestige();
   if(tab==="stats") renderStats();
@@ -980,7 +1123,11 @@ function totalIncomePerSec(){
     const lvl = STATE.generators[key]||0;
     if(lvl>0) total += GENERATOR_DEFS[key].baseIncome * lvl;
   });
-  return total * rewardMultiplier() * (1 + (STATE.upgrades.genBoost||0)*0.15);
+  const hyperMult = Math.pow(2, STATE.upgrades.hyper_gen||0);
+  const singularityMult = Math.pow(5, STATE.upgrades.singularity_boost||0);
+  const netWorth = STATE.money + STATE.inventory.reduce((s,i)=>s+(i.value||0),0);
+  const infiniteWealth = netWorth * (STATE.upgrades.infinite_wealth||0) * 0.001;
+  return total * rewardMultiplier() * (1 + (STATE.upgrades.genBoost||0)*0.15) * hyperMult * singularityMult + infiniteWealth;
 }
 
 /* ============================================================
@@ -1012,7 +1159,7 @@ function renderCases(){
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Case</button>
       <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
-      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
+      ${STATE.autoOpenUnlocked ? `<button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>` : ""}
     </div>
   `).join("");
 }
@@ -1026,7 +1173,7 @@ function renderKnifeCases(){
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Crate</button>
       <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
-      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
+      ${STATE.autoOpenUnlocked ? `<button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>` : ""}
     </div>
   `).join("");
 }
@@ -1044,7 +1191,7 @@ function renderLimitedCases(){
       <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
       <button class="btn primary open-case-btn">Open Case</button>
       <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
-      <button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>
+      ${STATE.autoOpenUnlocked ? `<button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>` : ""}
     </div>`;
 }
 
@@ -1098,7 +1245,7 @@ function computeCaseOdds(caseDef, kind){
     ];
   }
   if(kind==="limited"){
-    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25) * (1+(STATE.upgrades.void_luck||0)*0.5) * (1+(STATE.upgrades.dark_energy||0)*0.30) * Math.pow(5, STATE.upgrades.singularity_boost||0);
     const rest = 1 - cbChance;
     const luckLevel = STATE.upgrades.luck;
     const luckMult = 1 + luckLevel*0.18;
@@ -1171,6 +1318,8 @@ document.getElementById("casePreviewModal").addEventListener("click", e=>{
    ============================================================ */
 let isOpening = false;
 let autoOpenInterval = null;
+let suppressSaveToast = false;
+Object.defineProperty(window, "suppressSaveToast", { get:()=>suppressSaveToast, set:v=>suppressSaveToast=v });
 
 function resolveOneCaseResult(caseDef, kind){
   let resultSkin;
@@ -1180,13 +1329,18 @@ function resolveOneCaseResult(caseDef, kind){
     if(Math.random() < exclusiveChance){ resultSkin = pickSkinFromRarity("exclusive"); }
     else { resultSkin = pickSkinFromRarity("knife"); }
   } else if(kind==="limited"){
-    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25) * (1+(STATE.upgrades.void_luck||0)*0.5) * (1+(STATE.upgrades.dark_energy||0)*0.30) * Math.pow(5, STATE.upgrades.singularity_boost||0);
     const roll = Math.random();
-    if(roll < cbChance * 0.00000000001){ resultSkin = pickSkinFromRarity("singularity"); }
-    else if(roll < cbChance * 0.0000001){ resultSkin = pickSkinFromRarity("cosmic"); }
-    else if(roll < cbChance * 0.00001){ resultSkin = pickSkinFromRarity("divine"); }
-    else if(roll < cbChance * 0.001){ resultSkin = pickSkinFromRarity("mythical"); }
-    else if(roll < cbChance){ resultSkin = pickSkinFromRarity("contraband"); }
+    if(roll < cbChance * 1e-19){          resultSkin = pickSkinFromRarity("transcendent"); }
+    else if(roll < cbChance * 1e-16){    resultSkin = pickSkinFromRarity("godlike"); }
+    else if(roll < cbChance * 1e-13){    resultSkin = pickSkinFromRarity("ethereal"); }
+    else if(roll < cbChance * 1e-10){    resultSkin = pickSkinFromRarity("abyssal"); }
+    else if(roll < cbChance * 1e-8){     resultSkin = pickSkinFromRarity("celestial"); }
+    else if(roll < cbChance * 1e-11){    resultSkin = pickSkinFromRarity("singularity"); }
+    else if(roll < cbChance * 1e-7){     resultSkin = pickSkinFromRarity("cosmic"); }
+    else if(roll < cbChance * 0.00001){  resultSkin = pickSkinFromRarity("divine"); }
+    else if(roll < cbChance * 0.001){    resultSkin = pickSkinFromRarity("mythical"); }
+    else if(roll < cbChance){            resultSkin = pickSkinFromRarity("contraband"); }
     else { const rarityId = weightedPickRarity(caseDef.oddsBoost, 0); resultSkin = pickSkinFromRarity(rarityId==="contraband"?"exclusive":rarityId); }
   } else {
     const rarityId = weightedPickRarity(caseDef.oddsBoost, 0);
@@ -1197,6 +1351,9 @@ function resolveOneCaseResult(caseDef, kind){
 
 const MULTI_OPEN_COST = 1_000_000_000;
 const MULTI_OPEN_COUNT = 10;
+const AUTO_OPEN_SHOP_COST    = 500_000_000_000;   // 500B one-time
+const AUTO_SELL_SHOP_COST    = 1_000_000_000_000; // 1T one-time
+const AUTO_STICKER_SHOP_COST = 10_000_000_000_000; // 10T one-time // 500 billion one-time purchase
 
 function openMultipleCases(caseId, kind){
   if(isOpening) return;
@@ -1247,40 +1404,53 @@ function showMultiOpenResults(items){
 }
 
 function toggleAutoOpen(caseId, kind, btn){
+  if(!STATE.autoOpenUnlocked){
+    toast("🔒 Buy Auto-Open in the Upgrade Shop first!");
+    return;
+  }
   if(autoOpenInterval){
     clearInterval(autoOpenInterval);
     autoOpenInterval = null;
-    btn.textContent = "⏩ Auto Open";
-    btn.classList.remove("danger");
+    // update all auto buttons
+    suppressSaveToast = false;
+  document.querySelectorAll(".auto-open-btn").forEach(b=>{ b.textContent="⏩ Auto Open"; b.classList.remove("danger"); });
     return;
   }
-  btn.textContent = "⏹ Stop Auto";
-  btn.classList.add("danger");
+  document.querySelectorAll(".auto-open-btn").forEach(b=>{ b.textContent="⏹ Stop Auto"; b.classList.add("danger"); });
+  suppressSaveToast = true;
+  let autoSaveCounter = 0;
   const runOne = ()=>{
     const caseDef = caseDefById(caseId, kind);
-    if(!caseDef || STATE.money < caseDef.price){
+    const batchSize = 10; // always open 10 when auto-open is unlocked
+    const totalCost = caseDef.price * batchSize;
+    if(!caseDef || STATE.money < totalCost){
       clearInterval(autoOpenInterval);
       autoOpenInterval = null;
-      btn.textContent = "⏩ Auto Open";
-      btn.classList.remove("danger");
+      suppressSaveToast = false;
+      document.querySelectorAll(".auto-open-btn").forEach(b=>{ b.textContent="⏩ Auto Open"; b.classList.remove("danger"); });
       toast("⏹ Auto-open stopped (not enough money)");
       return;
     }
-    if(isOpening) return;
-    STATE.money -= caseDef.price;
-    STATE.stats.totalSpent += caseDef.price;
-    const skin = resolveOneCaseResult(caseDef, kind);
-    const item = addToInventory(skin);
-    STATE.stats.casesOpened++;
-    updateTopbar();
-    if(RARITY_INDEX[skin.rarity]>=6){
-      toast(`✨ Auto-open: ${skin.name} (${rarityMeta(skin.rarity).label}) — ${formatMoney(item.value)}`);
-      if(RARITY_INDEX[skin.rarity]>=9) broadcastRareEvent(`🌍 ${STATE.username} auto-opened <b>${skin.name}</b> (${rarityMeta(skin.rarity).label}) worth ${formatMoney(item.value)}!`);
+    STATE.money -= totalCost;
+    STATE.stats.totalSpent += totalCost;
+    const rare = [];
+    for(let i=0;i<batchSize;i++){
+      const skin = resolveOneCaseResult(caseDef, kind);
+      const item = addToInventory(skin);
+      STATE.stats.casesOpened++;
+      if(RARITY_INDEX[skin.rarity]>=6) rare.push({skin, item});
     }
-    saveState(false);
-    checkAchievements();
+    updateTopbar();
+    // only toast/broadcast truly rare drops, not spammy
+    rare.forEach(({skin, item})=>{
+      toast(`✨ Auto: ${skin.name} (${rarityMeta(skin.rarity).label}) — ${formatMoney(item.value)}`);
+      if(RARITY_INDEX[skin.rarity]>=9) broadcastRareEvent(`🌍 ${STATE.username} auto-opened <b>${skin.name}</b> (${rarityMeta(skin.rarity).label}) worth ${formatMoney(item.value)}!`);
+    });
+    // only save every 10 batches (100 opens) to avoid spam
+    autoSaveCounter++;
+    if(autoSaveCounter>=10){ autoSaveCounter=0; saveState(true); checkAchievements(); }
   };
-  autoOpenInterval = setInterval(runOne, 400);
+  autoOpenInterval = setInterval(runOne, 600);
 }
 
 function openCaseFlow(caseId, kind){
@@ -1308,7 +1478,7 @@ function openCaseFlow(caseId, kind){
     }
   } else if(kind==="limited"){
     // the only path that can ever produce a Contraband-tier or higher drop
-    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25);
+    const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25) * (1+(STATE.upgrades.void_luck||0)*0.5) * (1+(STATE.upgrades.dark_energy||0)*0.30) * Math.pow(5, STATE.upgrades.singularity_boost||0);
     const roll = Math.random();
     // Ultra-rare tiers — each is a fraction of the contraband chance
     if(roll < cbChance * 0.00000000001){
@@ -1905,6 +2075,28 @@ document.getElementById("itemInspectModal").addEventListener("click", e=>{
 });
 
 /* ============================================================
+   AUTO-SELL RARITY PICKER
+   ============================================================ */
+function syncAutoSellPicker(){
+  const sel = document.getElementById("autoSellRaritySelect");
+  if(!sel) return;
+  sel.value = STATE.autoSellMinRarity || "consumer";
+  const asc = document.getElementById("autoSellControls");
+  if(asc){ if(STATE.autoSellUnlocked) asc.classList.remove("hidden"); else asc.classList.add("hidden"); }
+}
+document.addEventListener("DOMContentLoaded", ()=>{
+  const sel = document.getElementById("autoSellRaritySelect");
+  if(sel){
+    syncAutoSellPicker();
+    sel.addEventListener("change", ()=>{
+      STATE.autoSellMinRarity = sel.value;
+      toast("💸 Auto-Sell threshold → "+sel.options[sel.selectedIndex].text);
+      saveState(true);
+    });
+  }
+});
+
+/* ============================================================
    STICKER SHOP
    ============================================================ */
 function renderStickerShop(){
@@ -2041,14 +2233,20 @@ document.getElementById("executeTradeupBtn").addEventListener("click", ()=>{
    ============================================================ */
 function renderUpgrades(){
   const grid = document.getElementById("upgradesGrid");
-  grid.innerHTML = Object.keys(UPGRADE_DEFS).map(key=>{
+  const tierLabels = {1:"⚔️ Early Game",2:"🏴 Mid Game",3:"🌌 Late Game",4:"⚛️ End Game",5:"👁️ God Tier"};
+  const tierColors = {1:"#4b69ff",2:"#d32ce6",3:"#bf00ff",4:"#00eaff",5:"#ffffff"};
+  let lastTier = 0;
+  const cards = Object.keys(UPGRADE_DEFS).map(key=>{
     const def = UPGRADE_DEFS[key];
-    const level = STATE.upgrades[key];
+    const level = STATE.upgrades[key]||0;
     const maxed = level>=def.max;
     const cost = maxed?0:upgradeCost(def.base, level, def.growth);
     const pct = Math.round((level/def.max)*100);
-    return `
-    <div class="upgrade-card">
+    const tier = def.tier||1;
+    let header = "";
+    if(tier!==lastTier){ lastTier=tier; header=`<div class="upgrade-tier-header" style="--tc:${tierColors[tier]}">${tierLabels[tier]}</div>`; }
+    return header + `
+    <div class="upgrade-card tier-${tier}">
       <h4>${def.icon} ${def.name}</h4>
       <p>${def.desc}</p>
       <div class="upgrade-level">Level ${level} / ${def.max}</div>
@@ -2057,10 +2255,75 @@ function renderUpgrades(){
         ${maxed? "MAXED" : "Upgrade — "+formatMoney(cost)}
       </button>
     </div>`;
-  }).join("");
+  }).join("") + `
+    <div class="upgrade-card one-time-purchase ${STATE.autoOpenUnlocked?"owned":""}">
+      <h4>⏩ Auto-Open</h4>
+      <p>Unlocks the Auto-Open button on every case. When active, automatically opens <b>10 cases per tick</b> non-stop. One-time purchase.</p>
+      <div class="upgrade-level">${STATE.autoOpenUnlocked ? "✅ Owned" : "One-Time Purchase"}</div>
+      <button class="btn primary buy-autoopen-btn" ${STATE.autoOpenUnlocked?"disabled":""}>
+        ${STATE.autoOpenUnlocked ? "OWNED" : "Buy — "+formatMoney(AUTO_OPEN_SHOP_COST)}
+      </button>
+    </div>
+    <div class="upgrade-card one-time-purchase ${STATE.autoSellUnlocked?"owned":""}">
+      <h4>💸 Auto-Sell</h4>
+      <p>Every item unboxed at or below your chosen rarity threshold is <b>instantly sold</b> at full sell price. Favorites are always protected. Configure the threshold in the Inventory tab.</p>
+      <div class="upgrade-level">${STATE.autoSellUnlocked ? "✅ Owned" : "One-Time Purchase"}</div>
+      <button class="btn primary buy-autosell-btn" ${STATE.autoSellUnlocked?"disabled":""}>
+        ${STATE.autoSellUnlocked ? "OWNED" : "Buy — "+formatMoney(AUTO_SELL_SHOP_COST)}
+      </button>
+    </div>
+    <div class="upgrade-card one-time-purchase ${STATE.autoStickerUnlocked?"owned":""}">
+      <h4>🎫 Auto-Sticker</h4>
+      <p>Every item unboxed is automatically equipped with <b>3 stickers</b> — using your best owned stickers first, then auto-buying the best affordable ones. Massively boosts sell value.</p>
+      <div class="upgrade-level">${STATE.autoStickerUnlocked ? "✅ Owned" : "One-Time Purchase"}</div>
+      <button class="btn primary buy-autosticker-btn" ${STATE.autoStickerUnlocked?"disabled":""}>
+        ${STATE.autoStickerUnlocked ? "OWNED" : "Buy — "+formatMoney(AUTO_STICKER_SHOP_COST)}
+      </button>
+    </div>\`;
 }
 
 document.getElementById("upgradesGrid").addEventListener("click", e=>{
+  if(e.target.classList.contains("buy-autoopen-btn")){
+    if(STATE.autoOpenUnlocked){ toast("✅ Already owned!"); return; }
+    if(STATE.money < AUTO_OPEN_SHOP_COST){ toast("❌ Not enough money — costs "+formatMoney(AUTO_OPEN_SHOP_COST)); return; }
+    STATE.money -= AUTO_OPEN_SHOP_COST;
+    STATE.stats.totalSpent += AUTO_OPEN_SHOP_COST;
+    STATE.autoOpenUnlocked = true;
+    sfx("buy");
+    toast("⏩ Auto-Open unlocked! Find the button on any case.");
+    renderUpgrades();
+    renderCases(); renderKnifeCases(); renderLimitedCases();
+    updateTopbar();
+    saveState(true);
+    return;
+  }
+  if(e.target.classList.contains("buy-autosell-btn")){
+    if(STATE.autoSellUnlocked){ toast("✅ Already owned!"); return; }
+    if(STATE.money < AUTO_SELL_SHOP_COST){ toast("❌ Not enough money — costs "+formatMoney(AUTO_SELL_SHOP_COST)); return; }
+    STATE.money -= AUTO_SELL_SHOP_COST;
+    STATE.stats.totalSpent += AUTO_SELL_SHOP_COST;
+    STATE.autoSellUnlocked = true;
+    sfx("buy");
+    toast("💸 Auto-Sell unlocked! Configure the rarity threshold in your Inventory tab.");
+    renderUpgrades();
+    renderInventory();
+    updateTopbar();
+    saveState(true);
+    return;
+  }
+  if(e.target.classList.contains("buy-autosticker-btn")){
+    if(STATE.autoStickerUnlocked){ toast("✅ Already owned!"); return; }
+    if(STATE.money < AUTO_STICKER_SHOP_COST){ toast("❌ Not enough money — costs "+formatMoney(AUTO_STICKER_SHOP_COST)); return; }
+    STATE.money -= AUTO_STICKER_SHOP_COST;
+    STATE.stats.totalSpent += AUTO_STICKER_SHOP_COST;
+    STATE.autoStickerUnlocked = true;
+    sfx("buy");
+    toast("🎫 Auto-Sticker unlocked! Every new drop will be stickered automatically.");
+    renderUpgrades();
+    updateTopbar();
+    saveState(true);
+    return;
+  }
   if(!e.target.classList.contains("buy-upgrade-btn")) return;
   const key = e.target.dataset.key;
   const def = UPGRADE_DEFS[key];
@@ -2303,7 +2566,27 @@ document.querySelectorAll(".roul-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>spinRoulette(btn.dataset.color));
 });
 
+// Roulette wheel: 37 segments total (European style)
+// 1 green (0), 18 red, 18 black — laid out alternating red/black after green
+// Segment size in degrees: 360/37 ≈ 9.73°
+// Green = segment 0 (starts at 0°), then alternating red/black
+const ROUL_SEGMENTS = (() => {
+  const segs = [{ color:"green", idx:0 }];
+  const redNums  = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+  const blackNums= [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
+  // interleave around the wheel
+  const order = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+  for(let i=1;i<order.length;i++){
+    const n = order[i];
+    segs.push({ color: redNums.includes(n)?"red":"black", idx:i });
+  }
+  return segs;
+})();
+const ROUL_SEG_DEG = 360 / ROUL_SEGMENTS.length;
+let rouletteSpinning = false;
+
 function spinRoulette(color){
+  if(rouletteSpinning){ toast("⏳ Wheel is spinning..."); return; }
   const betInput = document.getElementById("rouletteBet");
   const bet = Math.max(1, Math.round(Number(betInput.value)||0));
   if(STATE.money < bet){ toast("❌ Not enough money"); return; }
@@ -2316,11 +2599,26 @@ function spinRoulette(color){
   const win = outcome===color;
   const payoutMult = color==="green" ? 14 : 2;
 
+  // pick a random segment of the outcome color
+  const matchingSegs = ROUL_SEGMENTS.filter(s=>s.color===outcome);
+  const targetSeg = matchingSegs[Math.floor(Math.random()*matchingSegs.length)];
+  // the pointer is at top (0°). We want targetSeg.idx * ROUL_SEG_DEG to land under pointer.
+  // Wheel rotates clockwise. To land segment X under top pointer,
+  // we rotate so that segment X's center aligns with 0°:
+  // needed rotation = 360 - (targetSeg.idx * ROUL_SEG_DEG + ROUL_SEG_DEG/2) + jitter
+  const jitter = (Math.random()-0.5)*ROUL_SEG_DEG*0.6;
+  const targetAngle = 360 - (targetSeg.idx * ROUL_SEG_DEG + ROUL_SEG_DEG/2) + jitter;
+  const fullSpins = (6 + Math.floor(Math.random()*4)) * 360;
+  // normalize rouletteRotation to 0-360 first to avoid giant numbers
+  rouletteRotation = rouletteRotation % 360;
+  const finalRotation = rouletteRotation + fullSpins + targetAngle - (rouletteRotation % 360);
+  rouletteRotation = finalRotation;
+
   const wheel = document.getElementById("rouletteWheel");
-  const spins = 5;
-  rouletteRotation += spins*360 + Math.random()*360;
+  wheel.style.transition = "transform 3.2s cubic-bezier(.17,.67,.12,1)";
   wheel.style.transform = `rotate(${rouletteRotation}deg)`;
   sfx("spin");
+  rouletteSpinning = true;
 
   STATE.stats.roulettePlayed++;
   const resultEl = document.getElementById("rouletteResult");
@@ -2328,6 +2626,8 @@ function spinRoulette(color){
   resultEl.className = "game-result";
 
   setTimeout(()=>{
+    rouletteSpinning = false;
+    wheel.style.transition = "";
     if(win){
       const payout = bet*payoutMult;
       STATE.money += payout;
@@ -2336,7 +2636,7 @@ function spinRoulette(color){
       resultEl.textContent = `🎉 Landed on ${outcome.toUpperCase()}! You won ${formatMoney(payout)}`;
       resultEl.className = "game-result win";
       sfx("win");
-      burstParticles(window.innerWidth/2, window.innerHeight/2, outcome==="green"?"#3ddc84":"#ff5252", 40);
+      burstParticles(window.innerWidth/2, window.innerHeight/2, outcome==="green"?"#3ddc84":outcome==="red"?"#ff5252":"#aaa", 50);
     } else {
       resultEl.textContent = `💀 Landed on ${outcome.toUpperCase()}. You lost ${formatMoney(bet)}`;
       resultEl.className = "game-result lose";
@@ -2345,7 +2645,7 @@ function spinRoulette(color){
     updateTopbar();
     checkAchievements();
     saveState(true);
-  }, 3100);
+  }, 3300);
 }
 
 /* ============================================================
