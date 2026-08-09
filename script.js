@@ -3141,7 +3141,6 @@ document.getElementById("plinkoMaxBtn").addEventListener("click", ()=>{
 
 let plinkoAutoActive = false;
 let plinkoAutoTimer = null;
-let plinkoAutoRemaining = 0;
 
 function setPlinkoAutoUI(active){
   const btn = document.getElementById("plinkoAutoBtn");
@@ -3158,30 +3157,9 @@ function setPlinkoAutoUI(active){
 
 function stopPlinkoAuto(reason){
   plinkoAutoActive = false;
-  plinkoAutoRemaining = 0;
-  if(plinkoAutoTimer){ clearTimeout(plinkoAutoTimer); plinkoAutoTimer = null; }
+  if(plinkoAutoTimer){ clearInterval(plinkoAutoTimer); plinkoAutoTimer = null; }
   setPlinkoAutoUI(false);
   if(reason) toast(reason);
-}
-
-function runPlinkoAuto(){
-  if(!plinkoAutoActive) return;
-  if(plinkoAutoRemaining<=0){
-    stopPlinkoAuto();
-    return;
-  }
-  const started = plinkoDrop(()=>{
-    if(!plinkoAutoActive) return;
-    plinkoAutoRemaining--;
-    if(plinkoAutoRemaining<=0){
-      stopPlinkoAuto();
-      return;
-    }
-    plinkoAutoTimer = setTimeout(runPlinkoAuto, 350);
-  });
-  if(started===false){
-    stopPlinkoAuto("🛑 Auto Drop stopped — not enough money");
-  }
 }
 
 document.getElementById("plinkoAutoCount").addEventListener("change", (e)=>{
@@ -3196,14 +3174,22 @@ document.getElementById("plinkoAutoBtn").addEventListener("click", ()=>{
     stopPlinkoAuto();
   } else {
     const countInput = document.getElementById("plinkoAutoCount");
-    let count = Math.floor(Number(countInput.value));
-    if(!count || count<1) count = 1;
-    if(count>100) count = 100;
-    countInput.value = count;
-    plinkoAutoRemaining = count;
+    let rate = Math.floor(Number(countInput.value));
+    if(!rate || rate<1) rate = 1;
+    if(rate>100) rate = 100;
+    countInput.value = rate;
+
     plinkoAutoActive = true;
     setPlinkoAutoUI(true);
-    runPlinkoAuto();
+
+    const intervalMs = 1000/rate;
+    plinkoAutoTimer = setInterval(()=>{
+      if(!plinkoAutoActive) return;
+      const started = plinkoDrop();
+      if(started===false){
+        stopPlinkoAuto("🛑 Auto Drop stopped — not enough money");
+      }
+    }, intervalMs);
   }
 });
 
