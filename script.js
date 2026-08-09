@@ -2998,11 +2998,11 @@ function drawPlinkoBoard(ball){
 
 // binomial random walk: at each of the 12 rows the ball bounces left(0)
 // or right(1) off a peg with 50/50 odds, landing in slot = sum of rights.
-function plinkoDrop(){
+function plinkoDrop(onSettled){
   const betInput = document.getElementById("plinkoBet");
   const bet = Math.floor(Number(betInput.value));
-  if(!bet || bet<1){ toast("❌ Enter a valid bet"); return; }
-  if(STATE.money < bet){ toast("❌ Not enough money"); return; }
+  if(!bet || bet<1){ toast("❌ Enter a valid bet"); return false; }
+  if(STATE.money < bet){ toast("❌ Not enough money"); return false; }
   const risk = document.getElementById("plinkoRisk").value;
   const table = PLINKO_RISK_TABLES[risk];
 
@@ -3064,7 +3064,13 @@ function plinkoDrop(){
       ball.y = startY + (finalY-startY)*t;
       drawPlinkoBoard(ball);
       if(t<1){ requestAnimationFrame(anim); }
-      else { settlePlinko(); }
+      else {
+        settlePlinko();
+        // remove the settled ball so balls stop piling up in the bottom slots
+        const idx = activePlinkoBalls.indexOf(ball);
+        if(idx>=0) activePlinkoBalls.splice(idx,1);
+        drawPlinkoBoard(null);
+      }
     }
     requestAnimationFrame(anim);
   }
@@ -3096,16 +3102,65 @@ function plinkoDrop(){
     updateTopbar();
     checkAchievements();
     saveState(true);
-
+    if(typeof onSettled==="function") onSettled();
   }
 
   stepRow();
+  return true;
 }
 
-document.getElementById("plinkoDropBtn").addEventListener("click", plinkoDrop);
+document.getElementById("plinkoDropBtn").addEventListener("click", ()=>plinkoDrop());
 resizePlinkoCanvas();
 renderPlinkoSlots();
 drawPlinkoBoard(null);
+
+document.getElementById("plinkoMaxBtn").addEventListener("click", ()=>{
+  const betInput = document.getElementById("plinkoBet");
+  const maxBet = Math.max(1, Math.floor(STATE.money));
+  betInput.value = maxBet;
+});
+
+let plinkoAutoActive = false;
+let plinkoAutoTimer = null;
+
+function setPlinkoAutoUI(active){
+  const btn = document.getElementById("plinkoAutoBtn");
+  const dropBtn = document.getElementById("plinkoDropBtn");
+  const maxBtn = document.getElementById("plinkoMaxBtn");
+  if(!btn) return;
+  btn.textContent = active ? "Stop Auto" : "Auto Drop";
+  btn.classList.toggle("danger", active);
+  dropBtn.disabled = active;
+  maxBtn.disabled = active;
+}
+
+function stopPlinkoAuto(reason){
+  plinkoAutoActive = false;
+  if(plinkoAutoTimer){ clearTimeout(plinkoAutoTimer); plinkoAutoTimer = null; }
+  setPlinkoAutoUI(false);
+  if(reason) toast(reason);
+}
+
+function runPlinkoAuto(){
+  if(!plinkoAutoActive) return;
+  const started = plinkoDrop(()=>{
+    if(!plinkoAutoActive) return;
+    plinkoAutoTimer = setTimeout(runPlinkoAuto, 350);
+  });
+  if(started===false){
+    stopPlinkoAuto("🛑 Auto Drop stopped — not enough money");
+  }
+}
+
+document.getElementById("plinkoAutoBtn").addEventListener("click", ()=>{
+  if(plinkoAutoActive){
+    stopPlinkoAuto();
+  } else {
+    plinkoAutoActive = true;
+    setPlinkoAutoUI(true);
+    runPlinkoAuto();
+  }
+});
 
 /* ============================================================
    PROFILE
