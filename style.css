@@ -471,6 +471,9 @@ body.legendary-flash::before{
   padding:9px 12px;border-radius:8px;width:120px;font-family:var(--f-mono);
 }
 .bet-controls input:focus{outline:1px solid var(--amber);}
+.plinko-auto-count{display:flex;align-items:center;gap:6px;font-size:.82em;color:var(--text-faint);}
+.plinko-auto-count input{width:64px;padding:9px 8px;text-align:center;}
+#plinkoMaxBtn.active{background:var(--amber);color:#1a1200;border-color:var(--amber);}
 
 /* ============================================================
    COINFLIP

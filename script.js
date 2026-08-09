@@ -3114,28 +3114,51 @@ resizePlinkoCanvas();
 renderPlinkoSlots();
 drawPlinkoBoard(null);
 
-document.getElementById("plinkoMaxBtn").addEventListener("click", ()=>{
+// "Max" toggles a live-sync mode: while active, the bet field is continuously
+// kept pinned to the player's current money balance as it changes.
+let plinkoAutoMaxActive = false;
+let plinkoAutoMaxTimer = null;
+
+function syncPlinkoMax(){
   const betInput = document.getElementById("plinkoBet");
-  const maxBet = Math.max(1, Math.floor(STATE.money));
-  betInput.value = maxBet;
+  betInput.value = Math.max(1, Math.floor(STATE.money));
+}
+
+document.getElementById("plinkoMaxBtn").addEventListener("click", ()=>{
+  const btn = document.getElementById("plinkoMaxBtn");
+  const betInput = document.getElementById("plinkoBet");
+  plinkoAutoMaxActive = !plinkoAutoMaxActive;
+  btn.classList.toggle("active", plinkoAutoMaxActive);
+  betInput.disabled = plinkoAutoMaxActive;
+  if(plinkoAutoMaxActive){
+    syncPlinkoMax();
+    plinkoAutoMaxTimer = setInterval(syncPlinkoMax, 200);
+  } else if(plinkoAutoMaxTimer){
+    clearInterval(plinkoAutoMaxTimer);
+    plinkoAutoMaxTimer = null;
+  }
 });
 
 let plinkoAutoActive = false;
 let plinkoAutoTimer = null;
+let plinkoAutoRemaining = 0;
 
 function setPlinkoAutoUI(active){
   const btn = document.getElementById("plinkoAutoBtn");
   const dropBtn = document.getElementById("plinkoDropBtn");
   const maxBtn = document.getElementById("plinkoMaxBtn");
+  const countInput = document.getElementById("plinkoAutoCount");
   if(!btn) return;
   btn.textContent = active ? "Stop Auto" : "Auto Drop";
   btn.classList.toggle("danger", active);
   dropBtn.disabled = active;
   maxBtn.disabled = active;
+  countInput.disabled = active;
 }
 
 function stopPlinkoAuto(reason){
   plinkoAutoActive = false;
+  plinkoAutoRemaining = 0;
   if(plinkoAutoTimer){ clearTimeout(plinkoAutoTimer); plinkoAutoTimer = null; }
   setPlinkoAutoUI(false);
   if(reason) toast(reason);
@@ -3143,8 +3166,17 @@ function stopPlinkoAuto(reason){
 
 function runPlinkoAuto(){
   if(!plinkoAutoActive) return;
+  if(plinkoAutoRemaining<=0){
+    stopPlinkoAuto();
+    return;
+  }
   const started = plinkoDrop(()=>{
     if(!plinkoAutoActive) return;
+    plinkoAutoRemaining--;
+    if(plinkoAutoRemaining<=0){
+      stopPlinkoAuto();
+      return;
+    }
     plinkoAutoTimer = setTimeout(runPlinkoAuto, 350);
   });
   if(started===false){
@@ -3152,10 +3184,23 @@ function runPlinkoAuto(){
   }
 }
 
+document.getElementById("plinkoAutoCount").addEventListener("change", (e)=>{
+  let v = Math.floor(Number(e.target.value));
+  if(!v || v<1) v = 1;
+  if(v>100) v = 100;
+  e.target.value = v;
+});
+
 document.getElementById("plinkoAutoBtn").addEventListener("click", ()=>{
   if(plinkoAutoActive){
     stopPlinkoAuto();
   } else {
+    const countInput = document.getElementById("plinkoAutoCount");
+    let count = Math.floor(Number(countInput.value));
+    if(!count || count<1) count = 1;
+    if(count>100) count = 100;
+    countInput.value = count;
+    plinkoAutoRemaining = count;
     plinkoAutoActive = true;
     setPlinkoAutoUI(true);
     runPlinkoAuto();
