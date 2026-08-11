@@ -14,3 +14,6 @@ How you play the game from here is up to you. You can either jump right into ope
 
 How you play is fully your choice!
 
+---
+
+### Strategies 
