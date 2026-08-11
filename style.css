@@ -40,6 +40,8 @@
   --c-ethereal:#ff44cc;
   --c-godlike:#ff0000;
   --c-transcendent:#aaffff;
+  --c-eternal:#ffe9a8;
+  --c-omniscient:#ff2fe0;
 
   --f-display:'Arial Narrow',"Helvetica Neue",Arial,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
@@ -246,16 +248,16 @@ h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;}
 
 /* ---- animated skins / ambient special effects on rare cards ---- */
 .rarity-classified .skin-icon svg,.rarity-covert .skin-icon svg,
-.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,.rarity-mythical .skin-icon svg,.rarity-divine .skin-icon svg,.rarity-cosmic .skin-icon svg,.rarity-singularity .skin-icon svg,.rarity-celestial .skin-icon svg,.rarity-abyssal .skin-icon svg,.rarity-ethereal .skin-icon svg,.rarity-godlike .skin-icon svg,.rarity-transcendent .skin-icon svg,
+.rarity-knife .skin-icon svg,.rarity-exclusive .skin-icon svg,.rarity-contraband .skin-icon svg,.rarity-mythical .skin-icon svg,.rarity-divine .skin-icon svg,.rarity-cosmic .skin-icon svg,.rarity-singularity .skin-icon svg,.rarity-celestial .skin-icon svg,.rarity-abyssal .skin-icon svg,.rarity-ethereal .skin-icon svg,.rarity-godlike .skin-icon svg,.rarity-transcendent .skin-icon svg,.rarity-eternal .skin-icon svg,.rarity-omniscient .skin-icon svg,
 .rarity-classified .ri-icon svg,.rarity-covert .ri-icon svg,
-.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg,.rarity-mythical .ri-icon svg,.rarity-divine .ri-icon svg,.rarity-cosmic .ri-icon svg,.rarity-singularity .ri-icon svg,.rarity-celestial .ri-icon svg,.rarity-abyssal .ri-icon svg,.rarity-ethereal .ri-icon svg,.rarity-godlike .ri-icon svg,.rarity-transcendent .ri-icon svg{
+.rarity-knife .ri-icon svg,.rarity-exclusive .ri-icon svg,.rarity-contraband .ri-icon svg,.rarity-mythical .ri-icon svg,.rarity-divine .ri-icon svg,.rarity-cosmic .ri-icon svg,.rarity-singularity .ri-icon svg,.rarity-celestial .ri-icon svg,.rarity-abyssal .ri-icon svg,.rarity-ethereal .ri-icon svg,.rarity-godlike .ri-icon svg,.rarity-transcendent .ri-icon svg,.rarity-eternal .ri-icon svg,.rarity-omniscient .ri-icon svg{
   animation:skinShimmer 3s ease-in-out infinite;
 }
 @keyframes skinShimmer{
   0%,100%{filter:drop-shadow(0 3px 6px rgba(0,0,0,.55)) brightness(1) saturate(1);}
   50%{filter:drop-shadow(0 3px 10px var(--ri-border,rgba(0,0,0,.55))) brightness(1.2) saturate(1.4);}
 }
-.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after,.rarity-mythical .skin-icon::after,.rarity-divine .skin-icon::after,.rarity-cosmic .skin-icon::after,.rarity-singularity .skin-icon::after,.rarity-celestial .skin-icon::after,.rarity-abyssal .skin-icon::after,.rarity-ethereal .skin-icon::after,.rarity-godlike .skin-icon::after,.rarity-transcendent .skin-icon::after{
+.rarity-knife .skin-icon::after,.rarity-exclusive .skin-icon::after,.rarity-contraband .skin-icon::after,.rarity-mythical .skin-icon::after,.rarity-divine .skin-icon::after,.rarity-cosmic .skin-icon::after,.rarity-singularity .skin-icon::after,.rarity-celestial .skin-icon::after,.rarity-abyssal .skin-icon::after,.rarity-ethereal .skin-icon::after,.rarity-godlike .skin-icon::after,.rarity-transcendent .skin-icon::after,.rarity-eternal .skin-icon::after,.rarity-omniscient .skin-icon::after{
   content:"";position:absolute;inset:-8px;pointer-events:none;
   background:
     radial-gradient(circle at 26% 22%, rgba(255,255,255,.95), transparent 4%),
@@ -787,6 +789,30 @@ body.legendary-flash::before{
 }
 .text-transcendent{color:#aaffff;text-shadow:0 0 12px rgba(170,255,255,.9);}
 
+.rarity-eternal{
+  --ri-border:#ffe9a8;
+  box-shadow:0 0 70px rgba(255,233,168,.75);
+  animation:eternalPulse 1.1s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,233,168,.12),rgba(255,68,204,.08),rgba(170,255,255,.08),rgba(0,0,0,.3));
+}
+@keyframes eternalPulse{
+  0%,100%{box-shadow:0 0 40px rgba(255,233,168,.55),0 0 80px rgba(255,68,204,.25);}
+  50%{box-shadow:0 0 90px rgba(255,233,168,1),0 0 170px rgba(191,0,255,.55),0 0 220px rgba(170,255,255,.35);}
+}
+.text-eternal{color:#ffe9a8;text-shadow:0 0 14px rgba(255,233,168,.95);}
+
+.rarity-omniscient{
+  --ri-border:#ff2fe0;
+  box-shadow:0 0 80px rgba(255,47,224,.8);
+  animation:omniscientPulse 1s ease-in-out infinite;
+  background:linear-gradient(135deg,rgba(255,47,224,.14),rgba(255,233,168,.08),rgba(0,234,255,.08),rgba(0,0,0,.3));
+}
+@keyframes omniscientPulse{
+  0%,100%{box-shadow:0 0 46px rgba(255,47,224,.6),0 0 90px rgba(0,234,255,.3);}
+  50%{box-shadow:0 0 100px rgba(255,47,224,1),0 0 190px rgba(255,233,168,.6),0 0 240px rgba(0,234,255,.4);}
+}
+.text-omniscient{color:#ff2fe0;text-shadow:0 0 16px rgba(255,47,224,1);}
+
 /* multi-open result card */
 .multi-open-result{
   display:flex;flex-direction:column;gap:6px;padding:12px;max-height:70vh;overflow-y:auto;min-width:340px;
@@ -815,6 +841,20 @@ body.legendary-flash::before{
 }
 .case-badge-free{
   position:absolute;top:10px;right:10px;background:var(--teal);color:#04231f;font-size:.62em;
+  font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:20px;z-index:2;
+}
+
+/* ============================================================
+   VOID CASES (Eternal / Omniscient tier)
+   ============================================================ */
+.section-heading-void{margin-top:32px;}
+.case-card.void-case{
+  border-color:rgba(255,47,224,.4);
+  background:linear-gradient(160deg, rgba(255,233,168,.05), rgba(255,47,224,.05) 60%, var(--panel2));
+}
+.case-card.void-case:hover{border-color:var(--c-omniscient);box-shadow:var(--shadow-soft), 0 0 0 1px rgba(255,47,224,.25), 0 0 40px -8px rgba(255,47,224,.6);}
+.case-badge-void{
+  position:absolute;top:10px;right:10px;background:linear-gradient(90deg,#ffe9a8,#ff2fe0);color:#1a0620;font-size:.62em;
   font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:20px;z-index:2;
 }
 

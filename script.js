@@ -27,6 +27,12 @@ const RARITIES = [
   { id:"ethereal",    label:"Ethereal",        css:"ethereal",    color:"#ff44cc", weight:0, valueMin:10000000000000, valueMax:50000000000000 },
   { id:"godlike",     label:"Godlike",         css:"godlike",     color:"#ff0000", weight:0, valueMin:1e15,           valueMax:1e16 },
   { id:"transcendent",label:"Transcendent",    css:"transcendent",color:"#aaffff", weight:0, valueMin:1e18,           valueMax:1e19 },
+  // Eternal & Omniscient have weight 0, same as every tier above — they can
+  // never come from the normal weightedPickRarity pool. They are only ever
+  // handed out directly by the Void Market cases (see VOID_CASES), at odds
+  // around 1-in-100-quadrillion that only ever move with the Luck upgrade.
+  { id:"eternal",     label:"Eternal",         css:"eternal",     color:"#ffe9a8", weight:0, valueMin:3e200,          valueMax:8e200 },
+  { id:"omniscient",  label:"Omniscient",      css:"omniscient",  color:"#ff2fe0", weight:0, valueMin:3e201,          valueMax:9e201 },
 ];
 const RARITY_INDEX = {};
 RARITIES.forEach((r,i)=>RARITY_INDEX[r.id]=i);
@@ -330,6 +336,16 @@ const TRANSCENDENT_DB = [
   { id:"tr2", name:"AWP | The Last Light",              weapon:"AWP",             suffix:"The Last Light",     rarity:"transcendent", icon:"🌟", value:5e18 },
   { id:"tr3", name:"★ Butterfly Knife | Existence",     weapon:"Butterfly Knife", suffix:"Existence",          rarity:"transcendent", icon:"♾️", value:1e19 },
 ];
+const ETERNAL_DB = [
+  { id:"et1", name:"★ Karambit | Beyond The Veil",      weapon:"Karambit",        suffix:"Beyond The Veil",    rarity:"eternal",      icon:"🌠", value:3e200 },
+  { id:"et2", name:"★ Butterfly Knife | Endless Horizon",weapon:"Butterfly Knife", suffix:"Endless Horizon",    rarity:"eternal",      icon:"🌀", value:5e200 },
+  { id:"et3", name:"AWP | The Eternal Eye",              weapon:"AWP",             suffix:"The Eternal Eye",    rarity:"eternal",      icon:"👁️", value:8e200 },
+];
+const OMNISCIENT_DB = [
+  { id:"om1", name:"★ Karambit | All-Seeing",           weapon:"Karambit",        suffix:"All-Seeing",         rarity:"omniscient",   icon:"🔮", value:3e201 },
+  { id:"om2", name:"★ M9 Bayonet | The Final Truth",     weapon:"M9 Bayonet",      suffix:"The Final Truth",    rarity:"omniscient",   icon:"🌐", value:6e201 },
+  { id:"om3", name:"AK-47 | Genesis Code",               weapon:"AK-47",           suffix:"Genesis Code",       rarity:"omniscient",   icon:"✨", value:9e201 },
+];
 
 function allSkinsForRarity(rarityId){
   if(rarityId==="knife") return KNIFE_DB;
@@ -344,6 +360,8 @@ function allSkinsForRarity(rarityId){
   if(rarityId==="ethereal") return ETHEREAL_DB;
   if(rarityId==="godlike") return GODLIKE_DB;
   if(rarityId==="transcendent") return TRANSCENDENT_DB;
+  if(rarityId==="eternal") return ETERNAL_DB;
+  if(rarityId==="omniscient") return OMNISCIENT_DB;
   return SKIN_DB[rarityId] || [];
 }
 
@@ -432,6 +450,29 @@ function formatCountdown(ms){
   const m = Math.floor((ms%3600000)/60000);
   const s = Math.floor((ms%60000)/1000);
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+/* ---------------- VOID MARKET CASES ----------------
+   Priced around 1e200+. Not a source of Contraband — instead these are
+   the only source of the Eternal / Omniscient tiers, at odds so small
+   they're expressed as a fraction of a percent of a percent. The floor
+   result is always a guaranteed Exclusive-tier item; see voidCaseChances()
+   and resolveOneCaseResult() below for the actual roll. */
+const VOID_CASES = [
+  { id:"vcase_rift", name:"Void Rift Case", icon:"🕳️", price:1e200,
+    oddsBoost:6.0, desc:"Tears a hole clean through the fabric of the market. Guaranteed Exclusive-tier or better, with an almost immeasurable shot at something beyond Transcendent." },
+  { id:"vcase_omniversal", name:"Omniversal Case", icon:"🌀", price:5e200,
+    oddsBoost:8.0, desc:"Bankroll enough to buy a universe. Guaranteed Exclusive-tier or better, with the best odds anywhere at an Eternal or Omniscient pull." },
+];
+// Eternal/Omniscient odds scale only with the core Luck upgrade, from
+// 1-in-100-quadrillion (0.000000000000001%) at Luck level 0 up to
+// 1-in-10-quadrillion (0.00000000000001%) at Luck level 50 (maxed).
+// Omniscient sits a further order of magnitude beyond Eternal.
+function voidCaseChances(){
+  const luckLevel = clamp(STATE.upgrades.luck||0, 0, 50);
+  const eternalChance = 1e-17 * (1 + (luckLevel/50)*9); // 1e-17 -> 1e-16
+  const omniscientChance = eternalChance / 10;
+  return { eternalChance, omniscientChance };
 }
 
 /* ---------------- DAILY FREE CASE ---------------- */
@@ -579,7 +620,7 @@ function defaultState(){
       rouletteWon:0,
       roulettePlayed:0,
       skinsSold:0,
-      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0, mythical:0, divine:0, cosmic:0, singularity:0, celestial:0, abyssal:0, ethereal:0, godlike:0, transcendent:0 },
+      rarityFound:{ consumer:0, industrial:0, milspec:0, restricted:0, classified:0, covert:0, knife:0, exclusive:0, contraband:0, mythical:0, divine:0, cosmic:0, singularity:0, celestial:0, abyssal:0, ethereal:0, godlike:0, transcendent:0, eternal:0, omniscient:0 },
       crashesPlayed:0,
       crashesWon:0,
       stickersApplied:0,
@@ -1218,11 +1259,28 @@ function renderLimitedCases(){
       ${STATE.autoOpenUnlocked ? `<button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>` : ""}
     </div>`;
 }
+function renderVoidCases(){
+  const grid = document.getElementById("voidGrid");
+  if(!grid) return;
+  grid.innerHTML = VOID_CASES.map(c=>`
+    <div class="case-card void-case" data-case="${c.id}" data-kind="void">
+      <span class="case-badge-void">Void Market</span>
+      <div class="case-icon-badge"><span class="case-icon">${c.icon}</span></div>
+      <div class="case-name">${c.name}</div>
+      <div class="case-price">${formatMoney(c.price)}</div>
+      <div style="color:var(--text-dim);font-size:.8em;margin-bottom:10px;">${c.desc}</div>
+      <button class="btn primary open-case-btn">Open Case</button>
+      <button class="btn small multi-open-btn" style="margin-top:5px;background:#7c3aed;">📦 Multi-Open (10×) — $1B</button>
+      ${STATE.autoOpenUnlocked ? `<button class="btn small auto-open-btn" style="margin-top:4px;background:#1d4ed8;">⏩ Auto Open</button>` : ""}
+    </div>
+  `).join("");
+}
 
 function caseDefById(caseId, kind){
   if(kind==="knife") return KNIFE_CASES.find(c=>c.id===caseId);
   if(kind==="free") return FREE_CASE;
   if(kind==="limited") return LIMITED_CASES.find(c=>c.id===caseId) || todaysLimitedCase();
+  if(kind==="void") return VOID_CASES.find(c=>c.id===caseId);
   return CASES.find(c=>c.id===caseId);
 }
 
@@ -1252,6 +1310,7 @@ document.getElementById("casesGrid").addEventListener("click", e=>{
 });
 document.getElementById("knivesGrid").addEventListener("click", caseGridClickHandler("knife"));
 document.getElementById("limitedGrid").addEventListener("click", caseGridClickHandler("limited"));
+document.getElementById("voidGrid").addEventListener("click", caseGridClickHandler("void"));
 
 /* ============================================================
    CASE CONTENTS PREVIEW MODAL
@@ -1266,6 +1325,14 @@ function computeCaseOdds(caseDef, kind){
     return [
       { rarity:"exclusive", pct:exclusiveChance*100 },
       { rarity:"knife", pct:(1-exclusiveChance)*100 },
+    ];
+  }
+  if(kind==="void"){
+    const { eternalChance, omniscientChance } = voidCaseChances();
+    return [
+      { rarity:"omniscient", pct:omniscientChance*100 },
+      { rarity:"eternal", pct:eternalChance*100 },
+      { rarity:"exclusive", pct:(1-eternalChance-omniscientChance)*100 },
     ];
   }
   if(kind==="limited"){
@@ -1352,6 +1419,12 @@ function resolveOneCaseResult(caseDef, kind){
     const exclusiveChance = 0.01 * exclusiveMult * (1+STATE.upgrades.luck*0.1);
     if(Math.random() < exclusiveChance){ resultSkin = pickSkinFromRarity("exclusive"); }
     else { resultSkin = pickSkinFromRarity("knife"); }
+  } else if(kind==="void"){
+    const { eternalChance, omniscientChance } = voidCaseChances();
+    const roll = Math.random();
+    if(roll < omniscientChance){ resultSkin = pickSkinFromRarity("omniscient"); }
+    else if(roll < omniscientChance + eternalChance){ resultSkin = pickSkinFromRarity("eternal"); }
+    else { resultSkin = pickSkinFromRarity("exclusive"); }
   } else if(kind==="limited"){
     const cbChance = caseDef.contrabandChance * (1+STATE.upgrades.luck*0.1) * (1+(STATE.upgrades.contrabandLuck||0)*0.25) * (1+(STATE.upgrades.void_luck||0)*0.5) * (1+(STATE.upgrades.dark_energy||0)*0.30) * Math.pow(5, STATE.upgrades.singularity_boost||0);
     const roll = Math.random();
@@ -1499,6 +1572,17 @@ function openCaseFlow(caseId, kind){
       resultSkin = pickSkinFromRarity("exclusive");
     } else {
       resultSkin = pickSkinFromRarity("knife");
+    }
+  } else if(kind==="void"){
+    // the only path that can ever produce an Eternal/Omniscient drop
+    const { eternalChance, omniscientChance } = voidCaseChances();
+    const roll = Math.random();
+    if(roll < omniscientChance){
+      resultSkin = pickSkinFromRarity("omniscient");
+    } else if(roll < omniscientChance + eternalChance){
+      resultSkin = pickSkinFromRarity("eternal");
+    } else {
+      resultSkin = pickSkinFromRarity("exclusive");
     }
   } else if(kind==="limited"){
     // the only path that can ever produce a Contraband-tier or higher drop
@@ -2338,7 +2422,7 @@ document.getElementById("upgradesGrid").addEventListener("click", e=>{
     sfx("buy");
     toast("⏩ Auto-Open unlocked! Find the button on any case.");
     renderUpgrades();
-    renderCases(); renderKnifeCases(); renderLimitedCases();
+    renderCases(); renderKnifeCases(); renderLimitedCases(); renderVoidCases();
     updateTopbar();
     saveState(true);
     return;
@@ -3448,6 +3532,7 @@ function renderAll(){
   renderCases();
   renderKnifeCases();
   renderLimitedCases();
+  renderVoidCases();
   renderInventory();
   renderTradeup();
   renderUpgrades();
