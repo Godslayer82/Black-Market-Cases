@@ -16,4 +16,4 @@ How you play is fully your choice!
 
 ---
 
-### Strategies 
+# Strategies 
