@@ -305,6 +305,15 @@ onAuthStateChanged(auth, async (user)=>{
       // Brand-new account — seed its cloud save from the freshly
       // started game (there's nothing else to pull it from now that
       // there's no local storage).
+      // Pre-fill username from the email local-part so new players
+      // aren't shown as "Player" until they visit their profile.
+      if(user.email && window.STATE){
+        const emailLocal = user.email.split("@")[0];
+        if(emailLocal && window.STATE.username === "Player"){
+          window.STATE.username = emailLocal;
+          if(window.updateTopbar) window.updateTopbar();
+        }
+      }
       await pushAllToCloud(user.uid);
       if(window.toast) window.toast("☁️ Cloud save created");
       return;

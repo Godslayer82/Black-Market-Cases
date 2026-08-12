@@ -585,6 +585,19 @@ const ACHIEVEMENT_DEFS = [
 /* ============================================================
    STATE
    ============================================================ */
+/** Returns the part of the signed-in user's email before the @,
+ *  or "Player" if no user is available. Used as the default display name. */
+function defaultUsername(){
+  try{
+    const user = window.CloudSync && window.CloudSync.getUser ? window.CloudSync.getUser() : null;
+    if(user && user.email){
+      const local = user.email.split("@")[0];
+      if(local) return local;
+    }
+  }catch(e){}
+  return "Player";
+}
+
 function defaultState(){
   return {
     username:"Player",
@@ -725,7 +738,7 @@ window.getPublicProfileSnapshot = function(){
       value: it.value, stattrak: !!it.stattrak, icon: it.icon
     }));
   return {
-    username: STATE.username || "Player",
+    username: STATE.username || defaultUsername(),
     avatarColor: STATE.avatarColor || "#ffb300",
     avatarUrl: STATE.avatarUrl || "",
     netWorth: STATE.money + invValue,
@@ -3320,7 +3333,7 @@ document.getElementById("profilePinnedGrid").addEventListener("click", e=>{
 
 document.getElementById("saveProfileBtn").addEventListener("click", ()=>{
   const name = document.getElementById("usernameInput").value.trim();
-  STATE.username = name || "Player";
+  STATE.username = name || defaultUsername();
   STATE.avatarColor = document.getElementById("avatarColorInput").value;
   const url = document.getElementById("avatarUrlInput").value.trim();
   STATE.avatarUrl = /^https?:\/\//i.test(url) ? url : "";
@@ -3487,7 +3500,7 @@ async function renderLeaderboard(){
   tbody.innerHTML = leaderboardCache.map((p,i)=>`
     <tr class="${p.uid===myUid?"you":""}" data-uid="${p.uid}">
       <td>#${i+1}</td>
-      <td><span class="lb-player-cell">${avatarCircleHTML(p)}${p.username||"Player"}</span></td>
+      <td><span class="lb-player-cell">${avatarCircleHTML(p)}${p.username||defaultUsername()}</span></td>
       <td>${formatMoney(p.netWorth||0)}</td>
     </tr>
   `).join("");
@@ -3507,7 +3520,7 @@ function openProfileViewModal(profile){
     <div class="profile-view-header">
       ${avatarCircleHTML(profile, "large")}
       <div>
-        <div class="profile-view-name">${profile.username||"Player"}</div>
+        <div class="profile-view-name">${profile.username||defaultUsername()}</div>
         <div class="profile-view-worth">💰 ${formatMoney(profile.netWorth||0)} net worth</div>
       </div>
     </div>
