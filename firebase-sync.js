@@ -140,7 +140,7 @@ async function pushAllToCloud(uid){
   await Promise.all([pushStateToCloud(uid), pushPublicProfile(uid)]);
 }
 async function _fetchLeaderboard(topN){
-  const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 500));
+  const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 5000));
   const snap = await getDocs(q);
   const out = [];
   snap.forEach(docSnap=>{
@@ -333,7 +333,7 @@ onAuthStateChanged(auth, async (user)=>{
    ============================================================ */
 
 const ADMIN_EMAIL   = "detlaffcameron@gmail.com";
-const STAGGER_DELAY = 80;  // ms between Firestore writes in bulk mode
+const STAGGER_DELAY = 20;  // ms between Firestore writes in bulk mode
 
 // ── Utility helpers ────────────────────────────────────────────────────────
 function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
@@ -423,6 +423,15 @@ function ghostUsername(){
   // 80% chance: just "Player" + numbers (most common game default name)
   if(Math.random() < 0.80){
     return "Player" + randInt(1000, 99999);
+  }
+  // 5% chance: LazarBeam-inspired username
+  if(Math.random() < 0.05){
+    const lazerPrefixes = ["Lazar","LazarBeam","Lanan","FreshLazar","FreshBrawler","FreshYT",
+      "LazerBeamFan","LazarGang","Lazar_Beam","LazerSkins","LazarSquad","MrFresh","FreshKicks",
+      "LazerBoy","LazerFan","FreshMerch","LazarYT","TheLazar","LazerBeamAU","FreshAU"];
+    const lazerSuffix = ["","_YT","_AU","_Real","_Fan",""+randInt(1,999),"_Official","_TV","_OG",
+      "_G","_Pro","_CSGO","_Cases","_Skins"];
+    return randFrom(lazerPrefixes) + randFrom(lazerSuffix);
   }
   // 20% chance: realistic first name + optional last initial or number
   const first = ["James","Liam","Noah","Oliver","Elijah","Lucas","Mason","Ethan","Aiden","Logan",
@@ -593,7 +602,7 @@ function buildAdminPanel(){
 
         <label class="admin-label" for="adminBulkInput">Bulk Spawn</label>
         <div class="admin-row">
-          <input id="adminBulkInput" type="number" min="1" max="500" value="20" class="admin-input" placeholder="Count">
+          <input id="adminBulkInput" type="number" min="1" max="5000" value="20" class="admin-input" placeholder="Count">
           <button class="admin-btn" id="adminBulkSpawn">🚀 Spawn</button>
         </div>
         <p class="admin-hint small">Ghosts are staggered ~80 ms apart to avoid Firestore quota limits.</p>
@@ -617,7 +626,7 @@ function buildAdminPanel(){
   document.getElementById("adminBulkSpawn").addEventListener("click", ()=>{
     if(ghostBusy){ window.toast && window.toast("⏳ Spawn in progress…"); return; }
     const raw = parseInt(document.getElementById("adminBulkInput").value,10);
-    const count = isNaN(raw)||raw<1 ? 1 : Math.min(raw,500);
+    const count = isNaN(raw)||raw<1 ? 1 : Math.min(raw,5000);
     spawnGhosts(count);
   });
 

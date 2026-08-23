@@ -3573,7 +3573,7 @@ async function renderLeaderboard(){
   tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">Loading leaderboard…</td></tr>`;
   let entries;
   try{
-    entries = await window.CloudSync.fetchLeaderboard(500); // fetch up to 500 for paging
+    entries = await window.CloudSync.fetchLeaderboard(5000); // fetch up to 5000 for paging
   }catch(e){
     console.error("Leaderboard fetch failed", e);
     tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">⚠️ Couldn't load the leaderboard — try again shortly.</td></tr>`;
