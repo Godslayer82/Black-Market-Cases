@@ -167,7 +167,7 @@ let announcementsUnsub = null;
 function startAnnouncementsListener(){
   if(announcementsUnsub) return;
   try{
-    const q = query(announcementsColRef, orderBy("ts", "desc"), limit(15));
+    const q = query(announcementsColRef, orderBy("ts", "desc"), limit(30));
     announcementsUnsub = onSnapshot(q, snap=>{
       const list = [];
       snap.forEach(docSnap=>{
@@ -523,9 +523,30 @@ async function createGhostAccount({ silent=false }={}){
 
   await setDoc(doc(db,"users",ghostUid),{ state, email:ghostUid+"@ghost.local", updatedAt:serverTimestamp() });
   await setDoc(doc(db,"leaderboard",ghostUid),{
-    username:state.username, avatarColor:state.avatarColor, avatarUrl:"", avatarEmoji:state.avatarEmoji||"",
+    username:state.username, avatarColor:state.avatarColor, avatarUrl:state.avatarUrl||"", avatarEmoji:state.avatarEmoji||"",
     netWorth, pinnedItems, updatedAt:serverTimestamp()
   });
+
+  // Occasionally fire a live-feed announcement so ghost activity shows in the ticker.
+  // ~25% chance per ghost, but only for notable net worths to keep it believable.
+  if(Math.random() < 0.25 && state.stats.bestDrop) {
+    const bd = state.stats.bestDrop;
+    const tier = bd.rarity || "covert";
+    const tierEmojis = {
+      exclusive:"✨", contraband:"☠️", mythical:"🔥", divine:"💫",
+      cosmic:"🌌", singularity:"🌀", celestial:"⭐", abyssal:"💀",
+      ethereal:"🔮", godlike:"⚡", transcendent:"♾️", eternal:"🌠",
+      omniscient:"🧿", covert:"🎯", knife:"🔪"
+    };
+    const icon = tierEmojis[tier] || "🎲";
+    try {
+      await addDoc(announcementsColRef, {
+        text: `${icon} ${state.username} just unboxed <b>${bd.name}</b> (${tier.charAt(0).toUpperCase()+tier.slice(1)}) worth ${ghostFormatMoney(bd.value)}!`,
+        uid: ghostUid,
+        ts: serverTimestamp()
+      });
+    } catch(e) { /* non-critical */ }
+  }
 
   if(!silent && window.toast)
     window.toast(`👤 ${state.username} — 💰 ${ghostFormatMoney(netWorth)}, ${state.pinned.length} pinned`);
