@@ -139,7 +139,7 @@ async function pushPublicProfile(uid){
 async function pushAllToCloud(uid){
   await Promise.all([pushStateToCloud(uid), pushPublicProfile(uid)]);
 }
-async function fetchLeaderboard(topN){
+async function _fetchLeaderboard(topN){
   const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 50));
   const snap = await getDocs(q);
   const out = [];
@@ -582,12 +582,9 @@ function injectLeaderboardStats(totalUsers){
   `;
 }
 
-// Hook into fetchLeaderboard so stats update whenever the board loads
-const _origFetchLeaderboard = fetchLeaderboard;
+// Wrapper: runs the real fetch then updates the stats bar
 async function fetchLeaderboard(topN){
-  const entries = await _origFetchLeaderboard(topN);
-  // Use the returned count as a proxy for total users
-  // (the leaderboard query fetches up to 50; if fewer come back we use that)
+  const entries = await _fetchLeaderboard(topN);
   injectLeaderboardStats(entries ? entries.length : 0);
   return entries;
 }
