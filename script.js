@@ -3634,3 +3634,24 @@ window.revealLoginGateForm = revealLoginGateForm;
 // ad-blocker) don't leave anyone stuck on a spinner forever — reveal
 // the sign-in form so they at least see what's wrong.
 setTimeout(revealLoginGateForm, 4000);
+
+/* ============================================================
+   SPACEBAR FLASH
+   ============================================================ */
+(()=>{
+  const flashEl = document.createElement("img");
+  flashEl.src = "https://coolimage";
+  Object.assign(flashEl.style, {
+    position: "fixed", top: "0", left: "0", width: "100vw", height: "100vh",
+    objectFit: "cover", zIndex: "99999", pointerEvents: "none",
+    opacity: "0", transition: "none"
+  });
+  document.body.appendChild(flashEl);
+
+  document.addEventListener("keydown", e => {
+    if(e.code === "Space" && e.target === document.body || e.code === "Space" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)){
+      flashEl.style.opacity = "1";
+      setTimeout(() => { flashEl.style.opacity = "0"; }, 80);
+    }
+  });
+})();
