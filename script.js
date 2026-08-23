@@ -3660,7 +3660,7 @@ setTimeout(revealLoginGateForm, 4000);
       flashEl.src = FLASH_IMAGES[Math.floor(Math.random() * FLASH_IMAGES.length)];
       document.body.appendChild(flashEl);
       flashEl.style.opacity = "1";
-      setTimeout(() => { flashEl.style.opacity = "0"; }, 80);
+      setTimeout(() => { flashEl.style.opacity = "0"; }, 200);
     }
   });
 })();
