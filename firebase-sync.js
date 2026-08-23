@@ -326,110 +326,19 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 
-
 /* ============================================================
-   ADMIN: GHOST ACCOUNT FACTORY
-   Only active when the signed-in user is the admin.
-   Press Right Alt to instantly create a random player account
-   with a random balance and up to 3 pinned inventory items.
-   The account is added to the leaderboard automatically.
+   ADMIN PANEL — GHOST ACCOUNT FACTORY
+   Right Alt opens a floating admin menu (admin only).
+   Invisible/silent for every other signed-in user.
    ============================================================ */
 
-const ADMIN_EMAIL = "detlaffcameron@gmail.com";
+const ADMIN_EMAIL   = "detlaffcameron@gmail.com";
+const STAGGER_DELAY = 300; // ms between Firestore writes in bulk mode
 
-// Random helpers
+// ── Utility helpers ────────────────────────────────────────────────────────
 function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function randFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-// Generate a random plausible username
-function ghostUsername(){
-  const adjectives = ["Silent","Shadow","Neon","Ghost","Iron","Void","Dark","Blaze","Storm","Phantom","Stealth","Rogue","Cyber","Ultra","Hyper","Apex","Radiant","Abyssal","Crimson","Binary","Toxic","Covert","Delta","Echo","Sigma"];
-  const nouns = ["Sniper","Trader","Wolf","Blade","Hunter","Striker","Fox","Hawk","Viper","Runner","Agent","Shark","Phantom","Ghost","Raven","Cobra","Specter","Wraith","Oracle","Sentinel","Reaper","Cipher","Baron","Nomad","Titan"];
-  const tag = randInt(100,9999);
-  return `${randFrom(adjectives)}${randFrom(nouns)}${tag}`;
-}
-
-// Generate a random balance (spans $500 to billions)
-function ghostBalance(){
-  const tier = Math.random();
-  if(tier < 0.40) return randInt(500, 100000);
-  if(tier < 0.65) return randInt(100000, 10000000);
-  if(tier < 0.82) return randInt(10000000, 1000000000);
-  if(tier < 0.93) return randInt(1000000000, 100000000000);
-  return randInt(100000000000, 50000000000000); // mega-rich outliers
-}
-
-// Pick a random skin from the game's existing skin pools
-function ghostPickSkin(){
-  if(!window.pickSkinFromRarity) return null;
-  const rarities = ["consumer","industrial","milspec","restricted","classified","covert","knife","exclusive","contraband"];
-  const weights  = [  20,         15,         15,        12,          10,          8,       8,      7,           5      ];
-  const total = weights.reduce((a,b)=>a+b,0);
-  let roll = Math.random()*total;
-  let chosen = rarities[0];
-  for(let i=0;i<rarities.length;i++){ if(roll<weights[i]){ chosen=rarities[i]; break; } roll-=weights[i]; }
-  return window.pickSkinFromRarity(chosen);
-}
-
-// Build a ghost inventory item (same shape as addToInventory in script.js)
-function ghostInventoryItem(skin){
-  const uidFn = window.uid || (()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8));
-  return {
-    uid:      uidFn(),
-    skinId:   skin.id,
-    name:     skin.name,
-    weapon:   skin.weapon,
-    suffix:   skin.suffix,
-    rarity:   skin.rarity,
-    icon:     skin.icon,
-    value:    skin.value,
-    float:    Math.round(Math.random()*99999999)/100000000,
-    stattrak: Math.random()<0.10,
-    pattern:  Math.floor(Math.random()*1000),
-    stickers: []
-  };
-}
-
-// Build a complete ghost STATE object matching script.js shape
-function buildGhostState(){
-  const username = ghostUsername();
-  const money    = ghostBalance();
-
-  const invSize  = randInt(3, 30);
-  const inventory = [];
-  for(let i=0;i<invSize;i++){
-    const skin = ghostPickSkin();
-    if(skin) inventory.push(ghostInventoryItem(skin));
-  }
-
-  // Pin 1-3 of the highest-value items
-  const sorted   = [...inventory].sort((a,b)=>b.value-a.value);
-  const pinCount = Math.min(randInt(1,3), sorted.length);
-  const pinned   = sorted.slice(0,pinCount).map(i=>i.uid);
-
-  const stats = {
-    casesOpened: randInt(0,50000), totalSpent:0, totalEarned:0,
-    knivesFound: randInt(0,200), exclusivesFound: randInt(0,50),
-    rarityFound:{}, bestDrop: null, retireCount: randInt(0,5),
-    longestSession: randInt(0,14400), totalPlaytime: randInt(0,1000000)
-  };
-  if(sorted.length){
-    const best = sorted[0];
-    stats.bestDrop = { name:best.name, value:best.value, rarity:best.rarity };
-  }
-
-  return {
-    username, money, inventory,
-    pinned, favorites:[],
-    upgrades:{}, generators:{},
-    stats, prestige:0, prestigePoints:0,
-    achievements:[], lastSaved: Date.now(),
-    avatarColor: `hsl(${randInt(0,359)},65%,52%)`,
-    avatarUrl:""
-  };
-}
-
-// Money formatter (falls back to window.formatMoney from script.js)
 function ghostFormatMoney(n){
   if(window.formatMoney) return window.formatMoney(n);
   if(n>=1e12) return "$"+(n/1e12).toFixed(2)+"T";
@@ -439,65 +348,249 @@ function ghostFormatMoney(n){
   return "$"+Math.round(n).toLocaleString();
 }
 
-// Write ghost account to Firestore (leaderboard + private save doc)
-async function createGhostAccount(){
-  const user = auth.currentUser;
-  if(!user || user.email !== ADMIN_EMAIL) return;
-
-  const toast = window.toast || console.log;
-  const ghostUid = "ghost_" + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-  const state    = buildGhostState();
-
-  const invValue    = state.inventory.reduce((a,b)=>a+(b.value||0),0);
-  const netWorth    = state.money + invValue;
-  const pinnedItems = state.pinned
-    .map(u=>state.inventory.find(i=>i.uid===u))
-    .filter(Boolean)
-    .map(item=>({
-      uid: item.uid, name: item.name, rarity: item.rarity,
-      icon: item.icon, value: item.value,
-      weapon: item.weapon||"", suffix: item.suffix||"",
-      float: item.float||0, stattrak: !!item.stattrak,
-      pattern: item.pattern||0, stickers: item.stickers||[]
-    }));
-
-  const publicSnap = {
-    username:    state.username,
-    avatarColor: state.avatarColor,
-    avatarUrl:   state.avatarUrl || "",
-    netWorth,
-    pinnedItems,
-    updatedAt:   serverTimestamp()
-  };
-
-  try{
-    await setDoc(doc(db,"users",ghostUid), {
-      state,
-      email: ghostUid + "@ghost.local",
-      updatedAt: serverTimestamp()
-    });
-    await setDoc(doc(db,"leaderboard",ghostUid), publicSnap);
-
-    toast("👤 Ghost created: " + state.username + " — 💰 " + ghostFormatMoney(netWorth) + " net worth, " + state.pinned.length + " pinned item(s)");
-    console.log("[ADMIN] Ghost account created", { ghostUid, username:state.username, netWorth, pinnedCount:state.pinned.length });
-  }catch(e){
-    console.error("[ADMIN] Ghost account creation failed", e);
-    toast("⚠️ Ghost creation failed — check console");
-  }
+// ── Ghost state generators ─────────────────────────────────────────────────
+function ghostUsername(){
+  const adj  = ["Silent","Shadow","Neon","Ghost","Iron","Void","Dark","Blaze","Storm","Phantom","Stealth","Rogue","Cyber","Ultra","Hyper","Apex","Radiant","Abyssal","Crimson","Binary","Toxic","Covert","Delta","Echo","Sigma","Frozen","Hollow","Mythic","Blazing","Onyx"];
+  const noun = ["Sniper","Trader","Wolf","Blade","Hunter","Striker","Fox","Hawk","Viper","Runner","Agent","Shark","Phantom","Ghost","Raven","Cobra","Specter","Wraith","Oracle","Sentinel","Reaper","Cipher","Baron","Nomad","Titan","Dagger","Pulse","Warden","Phantom","Nexus"];
+  return `${randFrom(adj)}${randFrom(noun)}${randInt(100,9999)}`;
 }
 
-// Right Alt hotkey — silently ignored for any non-admin user
-let ghostCooldown = false;
-document.addEventListener("keydown", async e=>{
-  if(e.code !== "AltRight") return;
+function ghostBalance(){
+  const t = Math.random();
+  if(t < 0.40) return randInt(500, 100000);
+  if(t < 0.65) return randInt(100000, 10000000);
+  if(t < 0.82) return randInt(10000000, 1000000000);
+  if(t < 0.93) return randInt(1000000000, 100000000000);
+  return randInt(100000000000, 50000000000000);
+}
+
+function ghostPickSkin(){
+  if(!window.pickSkinFromRarity) return null;
+  const pool    = ["consumer","industrial","milspec","restricted","classified","covert","knife","exclusive","contraband"];
+  const weights = [20,15,15,12,10,8,8,7,5];
+  const total   = weights.reduce((a,b)=>a+b,0);
+  let roll = Math.random()*total;
+  for(let i=0;i<pool.length;i++){ if(roll<weights[i]) return window.pickSkinFromRarity(pool[i]); roll-=weights[i]; }
+  return window.pickSkinFromRarity("consumer");
+}
+
+function ghostInventoryItem(skin){
+  const uidFn = window.uid || (()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+  return {
+    uid:uidFn(), skinId:skin.id, name:skin.name, weapon:skin.weapon,
+    suffix:skin.suffix, rarity:skin.rarity, icon:skin.icon, value:skin.value,
+    float:Math.round(Math.random()*99999999)/100000000,
+    stattrak:Math.random()<0.10, pattern:Math.floor(Math.random()*1000), stickers:[]
+  };
+}
+
+function buildGhostState(){
+  const username  = ghostUsername();
+  const money     = ghostBalance();
+  const inventory = [];
+  for(let i=0;i<randInt(3,30);i++){ const s=ghostPickSkin(); if(s) inventory.push(ghostInventoryItem(s)); }
+  const sorted   = [...inventory].sort((a,b)=>b.value-a.value);
+  const pinned   = sorted.slice(0,Math.min(randInt(1,3),sorted.length)).map(i=>i.uid);
+  const stats    = {
+    casesOpened:randInt(0,50000), totalSpent:0, totalEarned:0,
+    knivesFound:randInt(0,200), exclusivesFound:randInt(0,50),
+    rarityFound:{}, bestDrop:sorted[0]?{name:sorted[0].name,value:sorted[0].value,rarity:sorted[0].rarity}:null,
+    retireCount:randInt(0,5), longestSession:randInt(0,14400), totalPlaytime:randInt(0,1000000)
+  };
+  return { username, money, inventory, pinned, favorites:[], upgrades:{}, generators:{},
+    stats, prestige:0, prestigePoints:0, achievements:[], lastSaved:Date.now(),
+    avatarColor:`hsl(${randInt(0,359)},65%,52%)`, avatarUrl:"" };
+}
+
+// ── Core ghost writer ──────────────────────────────────────────────────────
+async function createGhostAccount({ silent=false }={}){
+  const user = auth.currentUser;
+  if(!user || user.email!==ADMIN_EMAIL) return;
+
+  const ghostUid    = "ghost_"+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+  const state       = buildGhostState();
+  const invValue    = state.inventory.reduce((a,b)=>a+(b.value||0),0);
+  const netWorth    = state.money+invValue;
+  const pinnedItems = state.pinned
+    .map(u=>state.inventory.find(i=>i.uid===u)).filter(Boolean)
+    .map(item=>({uid:item.uid,name:item.name,rarity:item.rarity,icon:item.icon,value:item.value,
+      weapon:item.weapon||"",suffix:item.suffix||"",float:item.float||0,
+      stattrak:!!item.stattrak,pattern:item.pattern||0,stickers:item.stickers||[]}));
+
+  await setDoc(doc(db,"users",ghostUid),{ state, email:ghostUid+"@ghost.local", updatedAt:serverTimestamp() });
+  await setDoc(doc(db,"leaderboard",ghostUid),{
+    username:state.username, avatarColor:state.avatarColor, avatarUrl:"",
+    netWorth, pinnedItems, updatedAt:serverTimestamp()
+  });
+
+  if(!silent && window.toast)
+    window.toast(`👤 ${state.username} — 💰 ${ghostFormatMoney(netWorth)}, ${state.pinned.length} pinned`);
+  console.log("[ADMIN] Ghost created", ghostUid, state.username, netWorth);
+  return { username:state.username, netWorth };
+}
+
+// ── Bulk spawner ───────────────────────────────────────────────────────────
+let ghostBusy = false;
+
+async function spawnGhosts(count){
+  if(ghostBusy) return;
+  ghostBusy = true;
+  closeAdminPanel();
+
+  const toast = window.toast || console.log;
+  let ok=0, fail=0;
+
+  // Live progress bar toast
+  const prog = document.createElement("div");
+  prog.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#1d222c;border:1px solid #272c38;border-radius:12px;padding:14px 20px;
+    font-size:.88em;color:#eef0f4;z-index:9999;min-width:260px;text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.6);`;
+  document.body.appendChild(prog);
+
+  const updateProg = (i) => {
+    const pct = Math.round((i/count)*100);
+    prog.innerHTML = `<div style="margin-bottom:8px">👻 Spawning ghosts… <b>${i}/${count}</b></div>
+      <div style="background:#272c38;border-radius:6px;height:6px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:#f2a93b;border-radius:6px;transition:width .2s"></div>
+      </div>`;
+  };
+
+  updateProg(0);
+  for(let i=0;i<count;i++){
+    updateProg(i);
+    try{ await createGhostAccount({silent:true}); ok++; }
+    catch(e){ console.error("[ADMIN] Ghost fail #"+i, e); fail++; }
+    if(i<count-1) await new Promise(r=>setTimeout(r,STAGGER_DELAY));
+  }
+
+  prog.remove();
+  ghostBusy = false;
+
+  toast(fail===0
+    ? `✅ Done — ${ok} ghost${ok!==1?"s":""} created`
+    : `⚠️ Done — ${ok} ok, ${fail} failed (check console)`);
+}
+
+// ── Admin panel UI ─────────────────────────────────────────────────────────
+let adminPanelEl = null;
+
+function buildAdminPanel(){
+  if(adminPanelEl) return;
+
+  adminPanelEl = document.createElement("div");
+  adminPanelEl.id = "adminPanel";
+  adminPanelEl.innerHTML = `
+    <div id="adminPanelInner">
+      <div id="adminPanelHeader">
+        <span>⚙️ Admin Panel</span>
+        <button id="adminPanelClose" title="Close">✕</button>
+      </div>
+      <div id="adminPanelBody">
+        <p class="admin-hint">Manage ghost accounts on the leaderboard.</p>
+
+        <button class="admin-btn primary" id="adminQuickSpawn">
+          👤 Quick Spawn
+          <span class="admin-btn-sub">Create 1 random ghost instantly</span>
+        </button>
+
+        <div class="admin-divider"></div>
+
+        <label class="admin-label" for="adminBulkInput">Bulk Spawn</label>
+        <div class="admin-row">
+          <input id="adminBulkInput" type="number" min="1" max="500" value="20" class="admin-input" placeholder="Count">
+          <button class="admin-btn" id="adminBulkSpawn">🚀 Spawn</button>
+        </div>
+        <p class="admin-hint small">Ghosts are staggered 300 ms apart to avoid Firestore quota limits.</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(adminPanelEl);
+
+  document.getElementById("adminPanelClose").addEventListener("click", closeAdminPanel);
+  adminPanelEl.addEventListener("click", e=>{ if(e.target===adminPanelEl) closeAdminPanel(); });
+
+  document.getElementById("adminQuickSpawn").addEventListener("click", ()=>{
+    if(ghostBusy){ window.toast && window.toast("⏳ Spawn in progress…"); return; }
+    closeAdminPanel();
+    createGhostAccount({silent:false}).catch(e=>{
+      console.error("[ADMIN]",e);
+      window.toast && window.toast("⚠️ Ghost creation failed — check console");
+    });
+  });
+
+  document.getElementById("adminBulkSpawn").addEventListener("click", ()=>{
+    if(ghostBusy){ window.toast && window.toast("⏳ Spawn in progress…"); return; }
+    const raw = parseInt(document.getElementById("adminBulkInput").value,10);
+    const count = isNaN(raw)||raw<1 ? 1 : Math.min(raw,500);
+    spawnGhosts(count);
+  });
+
+  // Also allow Enter in the bulk input
+  document.getElementById("adminBulkInput").addEventListener("keydown", e=>{
+    if(e.key==="Enter") document.getElementById("adminBulkSpawn").click();
+  });
+}
+
+function openAdminPanel(){
+  buildAdminPanel();
+  adminPanelEl.classList.add("open");
+}
+function closeAdminPanel(){
+  adminPanelEl && adminPanelEl.classList.remove("open");
+}
+
+// Right Alt toggles panel (admin only, silently ignored otherwise)
+document.addEventListener("keydown", e=>{
+  if(e.code!=="AltRight") return;
   e.preventDefault();
   const user = auth.currentUser;
-  if(!user || user.email !== ADMIN_EMAIL) return;
-  if(ghostCooldown){ (window.toast||console.log)("⏳ Ghost cooldown — wait a moment"); return; }
-  ghostCooldown = true;
-  setTimeout(()=>{ ghostCooldown=false; }, 2000);
-  await createGhostAccount();
+  if(!user || user.email!==ADMIN_EMAIL) return;
+  if(adminPanelEl && adminPanelEl.classList.contains("open")) closeAdminPanel();
+  else openAdminPanel();
 });
+
+// ── Leaderboard stats bar ──────────────────────────────────────────────────
+// Injected above the leaderboard table. Shows total users (leaderboard
+// count) and "active players" — a seeded-random value always between
+// 8-15% of total, stable between refreshes so it doesn't flicker.
+function injectLeaderboardStats(totalUsers){
+  let bar = document.getElementById("lbStatsBar");
+  if(!bar){
+    bar = document.createElement("div");
+    bar.id = "lbStatsBar";
+    const panel = document.getElementById("tab-leaderboard");
+    const table = panel && panel.querySelector(".leaderboard-table");
+    if(table) panel.insertBefore(bar, table);
+  }
+  // Seeded "active" count — floor(total * pct) where pct is stable for
+  // this total count so refreshes don't flicker a different number.
+  const seed   = totalUsers * 2654435761; // Knuth multiplicative hash
+  const pct    = 0.08 + ((seed % 1000) / 1000) * 0.07; // 8% – 15%
+  const active = Math.max(1, Math.floor(totalUsers * pct));
+
+  bar.innerHTML = `
+    <div class="lb-stat">
+      <span class="lb-stat-value">${totalUsers.toLocaleString()}</span>
+      <span class="lb-stat-label">Total Players</span>
+    </div>
+    <div class="lb-stat-divider"></div>
+    <div class="lb-stat">
+      <span class="lb-stat-value active">${active.toLocaleString()}</span>
+      <span class="lb-stat-label">🟢 Active Now</span>
+    </div>
+  `;
+}
+
+// Hook into fetchLeaderboard so stats update whenever the board loads
+const _origFetchLeaderboard = fetchLeaderboard;
+async function fetchLeaderboard(topN){
+  const entries = await _origFetchLeaderboard(topN);
+  // Use the returned count as a proxy for total users
+  // (the leaderboard query fetches up to 50; if fewer come back we use that)
+  injectLeaderboardStats(entries ? entries.length : 0);
+  return entries;
+}
 
 /* ---------------- wire up UI ---------------- */
 gate.tabSignIn && gate.tabSignIn.addEventListener("click", ()=>setGateMode("signin"));
@@ -514,4 +607,3 @@ window.CloudSync = {
   getUser: ()=> auth.currentUser,
   announceDrop: announceDrop,
 };
-

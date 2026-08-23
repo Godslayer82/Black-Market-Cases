@@ -1155,3 +1155,73 @@ body.legendary-flash::before{
 .gate-divider{display:flex;align-items:center;gap:10px;color:var(--text-faint);font-size:.72em;margin:4px 0;}
 .gate-divider::before,.gate-divider::after{content:"";flex:1;height:1px;background:var(--line);}
 .gate-note{color:var(--text-faint);font-size:.72em;text-align:center;line-height:1.5;margin-top:2px;}
+
+/* ============================================================
+   ADMIN PANEL (overlay, admin-only)
+   ============================================================ */
+#adminPanel{
+  display:none;position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+#adminPanel.open{ display:flex; }
+#adminPanelInner{
+  background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--radius-lg);width:340px;max-width:92vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.7);overflow:hidden;
+}
+#adminPanelHeader{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;background:var(--panel3);border-bottom:1px solid var(--line);
+  font-weight:700;font-size:.95em;color:var(--amber);letter-spacing:.03em;
+}
+#adminPanelClose{
+  background:none;border:none;color:var(--text-dim);cursor:pointer;
+  font-size:1.1em;padding:2px 6px;border-radius:6px;line-height:1;
+}
+#adminPanelClose:hover{ background:rgba(255,255,255,.08);color:var(--text); }
+#adminPanelBody{ padding:18px; }
+.admin-hint{ color:var(--text-dim);font-size:.83em;margin:0 0 14px; }
+.admin-hint.small{ margin-top:8px;margin-bottom:0; }
+.admin-btn{
+  display:flex;flex-direction:column;align-items:flex-start;
+  width:100%;padding:13px 16px;border-radius:var(--radius);
+  background:var(--panel3);border:1px solid var(--line);
+  color:var(--text);font-size:.9em;font-weight:600;cursor:pointer;
+  transition:.15s;text-align:left;gap:2px;
+}
+.admin-btn:hover{ background:#252b37;border-color:var(--amber);color:var(--amber); }
+.admin-btn.primary{ background:rgba(242,169,59,.1);border-color:rgba(242,169,59,.35);color:var(--amber); }
+.admin-btn.primary:hover{ background:rgba(242,169,59,.18);border-color:var(--amber); }
+.admin-btn-sub{ font-size:.77em;font-weight:400;color:var(--text-dim);margin-top:1px; }
+.admin-btn:hover .admin-btn-sub{ color:inherit;opacity:.75; }
+.admin-divider{ height:1px;background:var(--line);margin:16px 0; }
+.admin-label{ display:block;font-size:.78em;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-weight:600; }
+.admin-row{ display:flex;gap:8px; }
+.admin-input{
+  flex:1;padding:10px 12px;background:var(--panel3);border:1px solid var(--line);
+  border-radius:var(--radius);color:var(--text);font-size:.9em;font-family:var(--f-mono);
+}
+.admin-input:focus{ outline:none;border-color:var(--amber); }
+.admin-row .admin-btn{ width:auto;flex:0 0 auto;flex-direction:row;align-items:center;padding:10px 16px; }
+
+/* ============================================================
+   LEADERBOARD STATS BAR
+   ============================================================ */
+#lbStatsBar{
+  display:flex;align-items:center;gap:0;
+  background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--radius-lg);margin-bottom:16px;
+  overflow:hidden;
+}
+.lb-stat{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:14px 20px;gap:3px;
+}
+.lb-stat-value{
+  font-family:var(--f-mono);font-size:1.45em;font-weight:700;color:var(--text);
+  letter-spacing:-.02em;
+}
+.lb-stat-value.active{ color:#4ade80; }
+.lb-stat-label{ font-size:.74em;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em; }
+.lb-stat-divider{ width:1px;background:var(--line);align-self:stretch; }
