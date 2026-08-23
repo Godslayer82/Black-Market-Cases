@@ -3639,17 +3639,26 @@ setTimeout(revealLoginGateForm, 4000);
    SPACEBAR FLASH
    ============================================================ */
 (()=>{
+  const FLASH_IMAGES = [
+    "https://picsum.photos/seed/bmc1/1920/1080",
+    "https://picsum.photos/seed/bmc2/1920/1080",
+    "https://picsum.photos/seed/bmc3/1920/1080",
+    "https://picsum.photos/seed/bmc4/1920/1080",
+    "https://picsum.photos/seed/bmc5/1920/1080"
+  ];
+
   const flashEl = document.createElement("img");
-  flashEl.src = "https://cdn.discordapp.com/attachments/1361234857241477131/1541017684508942396/images.jpg?ex=6a8c100e&is=6a8abe8e&hm=f29d1fa08eece3d62b6b2f7009cb5e7d61cd5cc9ac4aa84800ff61be5a858265&";
   Object.assign(flashEl.style, {
     position: "fixed", top: "0", left: "0", width: "100vw", height: "100vh",
-    objectFit: "cover", zIndex: "99999", pointerEvents: "none",
+    objectFit: "cover", zIndex: "2147483647", pointerEvents: "none",
     opacity: "0", transition: "none"
   });
   document.body.appendChild(flashEl);
 
   document.addEventListener("keydown", e => {
-    if(e.code === "Space" && e.target === document.body || e.code === "Space" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)){
+    if(e.code === "Space" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)){
+      flashEl.src = FLASH_IMAGES[Math.floor(Math.random() * FLASH_IMAGES.length)];
+      document.body.appendChild(flashEl);
       flashEl.style.opacity = "1";
       setTimeout(() => { flashEl.style.opacity = "0"; }, 80);
     }
