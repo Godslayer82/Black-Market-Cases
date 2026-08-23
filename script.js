@@ -3640,11 +3640,11 @@ setTimeout(revealLoginGateForm, 4000);
    ============================================================ */
 (()=>{
   const FLASH_IMAGES = [
-    "https://picsum.photos/seed/bmc1/1920/1080",
-    "https://picsum.photos/seed/bmc2/1920/1080",
-    "https://picsum.photos/seed/bmc3/1920/1080",
-    "https://picsum.photos/seed/bmc4/1920/1080",
-    "https://picsum.photos/seed/bmc5/1920/1080"
+    "https://cdn.discordapp.com/attachments/1361234857241477131/1541017684508942396/images.jpg?ex=6a8c100e&is=6a8abe8e&hm=f29d1fa08eece3d62b6b2f7009cb5e7d61cd5cc9ac4aa84800ff61be5a858265&",
+    "https://cdn.discordapp.com/attachments/1361234857241477131/1541019029945323550/meaSaaTbaAaaaamhl1K_0jXAnkglt_6Y12.jpg?ex=6a8c114f&is=6a8abfcf&hm=f8ac32017043c829c869a30453130008a39ce67c96bda9eb3bf175388a18616f&",
+    "https://cdn.discordapp.com/attachments/1361234857241477131/1541019174250356757/xn_28_t.jpg?ex=6a8c1171&is=6a8abff1&hm=9b09bdcf37f3173d97a592df34ccad11ff1ef877fdeba127bc7d8051cbcbbc47&",
+    "https://cdn.discordapp.com/attachments/1361234857241477131/1541019238943301662/images_1.jpg?ex=6a8c1181&is=6a8ac001&hm=067fb6be5d55b1ce7f93d2caacf3eb0f2f84e38fcfdd874e5f4f37c4f6f89820&",
+    "https://cdn.discordapp.com/attachments/1361234857241477131/1541019327279403019/images_2.jpg?ex=6a8c1196&is=6a8ac016&hm=71bf1078e58f12e7b04b75d50c259a530e865f32c3914d93c025977017112e14&"
   ];
 
   const flashEl = document.createElement("img");
