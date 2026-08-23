@@ -3640,7 +3640,7 @@ setTimeout(revealLoginGateForm, 4000);
    ============================================================ */
 (()=>{
   const flashEl = document.createElement("img");
-  flashEl.src = "https://coolimage";
+  flashEl.src = "https://cdn.discordapp.com/attachments/1361234857241477131/1541017684508942396/images.jpg?ex=6a8c100e&is=6a8abe8e&hm=f29d1fa08eece3d62b6b2f7009cb5e7d61cd5cc9ac4aa84800ff61be5a858265&";
   Object.assign(flashEl.style, {
     position: "fixed", top: "0", left: "0", width: "100vw", height: "100vh",
     objectFit: "cover", zIndex: "99999", pointerEvents: "none",
