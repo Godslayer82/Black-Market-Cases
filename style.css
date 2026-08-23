@@ -1225,3 +1225,17 @@ body.legendary-flash::before{
 .lb-stat-value.active{ color:#4ade80; }
 .lb-stat-label{ font-size:.74em;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em; }
 .lb-stat-divider{ width:1px;background:var(--line);align-self:stretch; }
+
+/* ── Leaderboard pagination ─────────────────────────────────────────────── */
+#lbPagination{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:14px 0 4px;
+}
+.lb-page-btn{
+  background:var(--panel3);border:1px solid var(--line);color:var(--text);
+  padding:7px 18px;border-radius:var(--radius);font-size:.85em;cursor:pointer;
+  transition:.15s;font-family:var(--f-mono);
+}
+.lb-page-btn:hover:not([disabled]){background:#252b37;border-color:var(--amber);color:var(--amber);}
+.lb-page-btn[disabled]{opacity:.35;cursor:default;}
+.lb-page-info{color:var(--text-dim);font-size:.82em;font-family:var(--f-mono);}

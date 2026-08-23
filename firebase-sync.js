@@ -140,7 +140,7 @@ async function pushAllToCloud(uid){
   await Promise.all([pushStateToCloud(uid), pushPublicProfile(uid)]);
 }
 async function _fetchLeaderboard(topN){
-  const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 50));
+  const q = query(collection(db, "leaderboard"), orderBy("netWorth", "desc"), limit(topN || 500));
   const snap = await getDocs(q);
   const out = [];
   snap.forEach(docSnap=>{
@@ -333,7 +333,7 @@ onAuthStateChanged(auth, async (user)=>{
    ============================================================ */
 
 const ADMIN_EMAIL   = "detlaffcameron@gmail.com";
-const STAGGER_DELAY = 300; // ms between Firestore writes in bulk mode
+const STAGGER_DELAY = 80;  // ms between Firestore writes in bulk mode
 
 // ── Utility helpers ────────────────────────────────────────────────────────
 function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
@@ -350,9 +350,25 @@ function ghostFormatMoney(n){
 
 // ── Ghost state generators ─────────────────────────────────────────────────
 function ghostUsername(){
-  const adj  = ["Silent","Shadow","Neon","Ghost","Iron","Void","Dark","Blaze","Storm","Phantom","Stealth","Rogue","Cyber","Ultra","Hyper","Apex","Radiant","Abyssal","Crimson","Binary","Toxic","Covert","Delta","Echo","Sigma","Frozen","Hollow","Mythic","Blazing","Onyx"];
-  const noun = ["Sniper","Trader","Wolf","Blade","Hunter","Striker","Fox","Hawk","Viper","Runner","Agent","Shark","Phantom","Ghost","Raven","Cobra","Specter","Wraith","Oracle","Sentinel","Reaper","Cipher","Baron","Nomad","Titan","Dagger","Pulse","Warden","Phantom","Nexus"];
-  return `${randFrom(adj)}${randFrom(noun)}${randInt(100,9999)}`;
+  // 80% chance: just "Player" + numbers (most common game default name)
+  if(Math.random() < 0.80){
+    return "Player" + randInt(1000, 99999);
+  }
+  // 20% chance: realistic first name + optional last initial or number
+  const first = ["James","Liam","Noah","Oliver","Elijah","Lucas","Mason","Ethan","Aiden","Logan",
+    "Jackson","Sebastian","Jack","Owen","Samuel","Ryan","Nathan","Adam","Tyler","Brandon",
+    "Dylan","Jayden","Kevin","Austin","Zack","Jake","Hunter","Connor","Caleb","Jordan",
+    "Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia","Harper","Evelyn",
+    "Abigail","Emily","Ella","Elizabeth","Camila","Luna","Sofia","Avery","Mila","Aria",
+    "Alex","Taylor","Morgan","Riley","Casey","Jamie","Skyler","Reese","Avery","Quinn"];
+  const last = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Wilson",
+    "Martinez","Anderson","Taylor","Thomas","Moore","Jackson","Martin","Lee","White","Harris",
+    "Clark","Lewis","Robinson","Walker","Hall","Young","Allen","King","Scott","Green","Baker"];
+  const name = randFrom(first);
+  const r = Math.random();
+  if(r < 0.4)  return name + randFrom(last).charAt(0) + randInt(10,99);   // JamesS42
+  if(r < 0.7)  return name + randInt(100,9999);                            // James2847
+  return name + randFrom(last);                                             // JamesSmith
 }
 
 function ghostBalance(){
@@ -501,7 +517,7 @@ function buildAdminPanel(){
           <input id="adminBulkInput" type="number" min="1" max="500" value="20" class="admin-input" placeholder="Count">
           <button class="admin-btn" id="adminBulkSpawn">🚀 Spawn</button>
         </div>
-        <p class="admin-hint small">Ghosts are staggered 300 ms apart to avoid Firestore quota limits.</p>
+        <p class="admin-hint small">Ghosts are staggered ~80 ms apart to avoid Firestore quota limits.</p>
       </div>
     </div>
   `;

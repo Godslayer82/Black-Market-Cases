@@ -3475,6 +3475,45 @@ function avatarCircleHTML(profile, size){
 }
 
 let leaderboardCache = [];
+const LB_PAGE_SIZE   = 50;
+let   lbPage         = 0; // current zero-based page index
+
+function renderLeaderboardPage(){
+  const tbody  = document.getElementById("leaderboardBody");
+  const myUid  = window.CloudSync && window.CloudSync.getUser ? (window.CloudSync.getUser()||{}).uid : null;
+  const total  = leaderboardCache.length;
+  const pages  = Math.ceil(total / LB_PAGE_SIZE);
+  const start  = lbPage * LB_PAGE_SIZE;
+  const slice  = leaderboardCache.slice(start, start + LB_PAGE_SIZE);
+
+  tbody.innerHTML = slice.map((p,i)=>`
+    <tr class="${p.uid===myUid?"you":""}" data-uid="${p.uid}">
+      <td>#${start+i+1}</td>
+      <td><span class="lb-player-cell">${avatarCircleHTML(p)}${p.username||defaultUsername()}</span></td>
+      <td>${formatMoney(p.netWorth||0)}</td>
+    </tr>
+  `).join("");
+
+  // Pagination controls — only shown when there is more than one page
+  let ctrl = document.getElementById("lbPagination");
+  if(pages <= 1){
+    if(ctrl) ctrl.remove();
+    return;
+  }
+  if(!ctrl){
+    ctrl = document.createElement("div");
+    ctrl.id = "lbPagination";
+    const table = document.querySelector(".leaderboard-table");
+    if(table) table.insertAdjacentElement("afterend", ctrl);
+  }
+  ctrl.innerHTML = `
+    <button class="lb-page-btn" id="lbPrev" ${lbPage===0?"disabled":""}>← Prev</button>
+    <span class="lb-page-info">Page ${lbPage+1} of ${pages} · ${total} players</span>
+    <button class="lb-page-btn" id="lbNext" ${lbPage>=pages-1?"disabled":""}>Next →</button>
+  `;
+  document.getElementById("lbPrev").onclick = ()=>{ lbPage--; renderLeaderboardPage(); };
+  document.getElementById("lbNext").onclick = ()=>{ lbPage++; renderLeaderboardPage(); };
+}
 
 async function renderLeaderboard(){
   const tbody = document.getElementById("leaderboardBody");
@@ -3485,25 +3524,19 @@ async function renderLeaderboard(){
   tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">Loading leaderboard…</td></tr>`;
   let entries;
   try{
-    entries = await window.CloudSync.fetchLeaderboard(50);
+    entries = await window.CloudSync.fetchLeaderboard(500); // fetch up to 500 for paging
   }catch(e){
     console.error("Leaderboard fetch failed", e);
     tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">⚠️ Couldn't load the leaderboard — try again shortly.</td></tr>`;
     return;
   }
   leaderboardCache = entries || [];
+  lbPage = 0;
   if(!leaderboardCache.length){
     tbody.innerHTML = `<tr><td colspan="3" class="leaderboard-empty">No players yet — be the first to appear here!</td></tr>`;
     return;
   }
-  const myUid = window.CloudSync.getUser ? (window.CloudSync.getUser()||{}).uid : null;
-  tbody.innerHTML = leaderboardCache.map((p,i)=>`
-    <tr class="${p.uid===myUid?"you":""}" data-uid="${p.uid}">
-      <td>#${i+1}</td>
-      <td><span class="lb-player-cell">${avatarCircleHTML(p)}${p.username||defaultUsername()}</span></td>
-      <td>${formatMoney(p.netWorth||0)}</td>
-    </tr>
-  `).join("");
+  renderLeaderboardPage();
 }
 
 document.getElementById("leaderboardBody").addEventListener("click", e=>{
