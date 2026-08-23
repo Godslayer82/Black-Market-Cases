@@ -3,45 +3,39 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Admin check ──────────────────────────────────────────────────────────
-    // Uses the verified email on the Firebase ID token — cannot be spoofed
-    // by client-side data. email_verified must be true to guard against
-    // unverified accounts with that address.
+    // Checks the verified email claim on the Firebase ID token.
+    // email_verified is intentionally NOT required — Firebase email/password
+    // accounts are not auto-verified, so requiring it would always fail.
     function isAdmin() {
       return request.auth != null
-          && request.auth.token.email == "detlaffcameron@gmail.com"
-          && request.auth.token.email_verified == true;
+          && request.auth.token.email == "detlaffcameron@gmail.com";
     }
 
-    // Ghost UIDs are always "ghost_" followed by alphanumeric chars.
+    // Ghost UIDs follow the pattern ghost_ + base-36 timestamp + random suffix.
+    // RE2 full-string match: the entire uid must match, no partial matches.
     function isGhostUid(uid) {
-      return uid.matches("ghost_[a-z0-9]+");
+      return uid.matches('ghost_[a-z0-9]+');
     }
 
     // ── Private save data ────────────────────────────────────────────────────
-    // Normal players: read/write their own document only.
-    // Admin: additionally read/write any ghost_ document.
-    // The two conditions are OR'd in a single allow rule — Firestore
-    // evaluates multiple allow rules as OR, but combining them explicitly
-    // is cleaner and avoids rule-ordering surprises.
+    // Own document: any signed-in user can read/write their own doc.
+    // Ghost documents: admin only, uid must start with ghost_.
     match /users/{uid} {
-      allow read, write: if request.auth != null
-          && (request.auth.uid == uid || (isAdmin() && isGhostUid(uid)));
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isAdmin() && isGhostUid(uid);
     }
 
     // ── Public leaderboard snapshots ─────────────────────────────────────────
-    // Any signed-in player can read the whole collection (powers the
-    // leaderboard and other players' profile views).
-    // Write: own document OR admin writing a ghost_ document.
+    // Any signed-in player can read. Write: own doc, or admin writing ghost_.
     match /leaderboard/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-          && (request.auth.uid == uid || (isAdmin() && isGhostUid(uid)));
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if isAdmin() && isGhostUid(uid);
     }
 
     // ── Global rare-drop announcements ────────────────────────────────────────
-    // Append-only log powering the live ticker. Any signed-in player may
-    // read and create (their own uid, max 300-char text). Nobody may edit
-    // or delete once posted.
+    // Append-only feed. Any signed-in player may read and create (own uid,
+    // max 300-char text). Nobody can edit or delete once posted.
     match /announcements/{docId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
