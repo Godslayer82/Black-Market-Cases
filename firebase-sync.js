@@ -349,6 +349,76 @@ function ghostFormatMoney(n){
 }
 
 // ── Ghost state generators ─────────────────────────────────────────────────
+// Maps a ghost's generated username to a thematically matching avatar color
+// and emoji icon. Keywords in the name are checked first; if none match we
+// derive a deterministic hue from the name's hash so the same username always
+// produces the same color.
+function ghostAvatarFromName(username) {
+  const u = username.toLowerCase();
+
+  // [keyword cluster, hex color, emoji]
+  const themes = [
+    [["shadow","dark","abyss","night","eclipse","phantom","wraith","specter","noir","obsidian"],
+      "#5b21b6", "\u{1F311}"],
+    [["fire","flame","blaze","inferno","crimson","blood","rage","wrath","ember","lava","hell","devil"],
+      "#dc2626", "\u{1F525}"],
+    [["ice","frost","arctic","cryo","frozen","blizzard","snow","winter","cold","glacier","azure"],
+      "#0ea5e9", "\u2744\uFE0F"],
+    [["hunter","wolf","fox","bear","hawk","eagle","forest","wild","beast","alpha","apex","feral","predator"],
+      "#15803d", "\u{1F43A}"],
+    [["gold","king","queen","crown","royal","elite","prime","ace","emperor","supreme","lord","sovereign"],
+      "#ca8a04", "\u{1F451}"],
+    [["cyber","neon","tech","matrix","pixel","digital","byte","glitch","pulse","circuit","code","hack"],
+      "#0891b2", "\u26A1"],
+    [["death","skull","reaper","grim","dead","grave","cursed","poison","venom","viper","plague","lich"],
+      "#374151", "\u{1F480}"],
+    [["cosmos","cosmic","star","nova","astro","galaxy","solar","lunar","nebula","orbit","space"],
+      "#4338ca", "\u{1F30C}"],
+    [["rogue","ninja","blade","dagger","stealth","silent","sneak","strike","thief"],
+      "#1e293b", "\u{1F5E1}\uFE0F"],
+    [["storm","thunder","lightning","volt","surge","shock"],
+      "#7c3aed", "\u26A1"],
+    [["player"],
+      "#64748b", "\u{1F3AE}"],
+  ];
+
+  // Simple deterministic hash from username
+  const nameHash = [...username].reduce((h,c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0, 0);
+  const absHash  = Math.abs(nameHash);
+
+  // Helper: hex -> hsl string with optional hue jitter
+  function hexToHslShifted(hex, jitter) {
+    const r=parseInt(hex.slice(1,3),16)/255,
+          g=parseInt(hex.slice(3,5),16)/255,
+          b=parseInt(hex.slice(5,7),16)/255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+    let h=0;
+    if(d){
+      if(max===r)      h=((g-b)/d+6)%6;
+      else if(max===g) h=(b-r)/d+2;
+      else             h=(r-g)/d+4;
+    }
+    const hDeg = (Math.round(h*60) + jitter + 360) % 360;
+    const s    = max===0 ? 0 : Math.round(d/max*100);
+    const l    = Math.round((max+min)/2*100);
+    return "hsl("+hDeg+","+s+"%,"+l+"%)";
+  }
+
+  for (const [keys, hex, emoji] of themes) {
+    if (keys.some(k => u.includes(k))) {
+      const jitter = (absHash % 21) - 10;   // -10 … +10 deg so siblings differ slightly
+      return { avatarColor: hexToHslShifted(hex, jitter), avatarEmoji: emoji };
+    }
+  }
+
+  // No keyword match — pure hash-based fallback
+  const hue  = absHash % 360;
+  const sat  = 55 + ((absHash >> 8) % 20);
+  const lit  = 42 + ((absHash >> 4) % 14);
+  const emojis = ["\u{1F3AF}","\u{1F48E}","\u{1F52E}","\u{1F3B2}","\u{1F0CF}","\u{1F3B0}","\u{1F9FF}","\u2699\uFE0F"];
+  return { avatarColor: "hsl("+hue+","+sat+"%,"+lit+"%)", avatarEmoji: emojis[(absHash >> 12) % emojis.length] };
+}
+
 function ghostUsername(){
   // 80% chance: just "Player" + numbers (most common game default name)
   if(Math.random() < 0.80){
@@ -413,9 +483,18 @@ function buildGhostState(){
     rarityFound:{}, bestDrop:sorted[0]?{name:sorted[0].name,value:sorted[0].value,rarity:sorted[0].rarity}:null,
     retireCount:randInt(0,5), longestSession:randInt(0,14400), totalPlaytime:randInt(0,1000000)
   };
+  // 30% chance the ghost gets a real generated avatar image via DiceBear.
+  // The seed is the username so the same account always gets the same face.
+  // We pick from several styles so bots look varied on the leaderboard.
+  const ghostAvatarData = ghostAvatarFromName(username);
+  const DICEBEAR_STYLES = ["adventurer","avataaars","big-smile","bottts","croodles","fun-emoji","lorelei","micah","miniavs","personas","pixel-art","thumbs"];
+  const styleIdx = Math.abs([...username].reduce((h,c)=>(Math.imul(31,h)+c.charCodeAt(0))|0,0)) % DICEBEAR_STYLES.length;
+  const ghostAvatarUrl = Math.random() < 0.30
+    ? `https://api.dicebear.com/9.x/${DICEBEAR_STYLES[styleIdx]}/svg?seed=${encodeURIComponent(username)}&size=80`
+    : "";
   return { username, money, inventory, pinned, favorites:[], upgrades:{}, generators:{},
     stats, prestige:0, prestigePoints:0, achievements:[], lastSaved:Date.now(),
-    avatarColor:`hsl(${randInt(0,359)},65%,52%)`, avatarUrl:"" };
+    ...ghostAvatarData, avatarUrl:ghostAvatarUrl };
 }
 
 // ── Core ghost writer ──────────────────────────────────────────────────────
@@ -435,7 +514,7 @@ async function createGhostAccount({ silent=false }={}){
 
   await setDoc(doc(db,"users",ghostUid),{ state, email:ghostUid+"@ghost.local", updatedAt:serverTimestamp() });
   await setDoc(doc(db,"leaderboard",ghostUid),{
-    username:state.username, avatarColor:state.avatarColor, avatarUrl:"",
+    username:state.username, avatarColor:state.avatarColor, avatarUrl:"", avatarEmoji:state.avatarEmoji||"",
     netWorth, pinnedItems, updatedAt:serverTimestamp()
   });
 

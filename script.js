@@ -2603,7 +2603,51 @@ function applyOfflineEarnings(){
 /* ============================================================
    JACKPOT
    ============================================================ */
-const JACKPOT_BOTS = ["ShadowFox","VendettaX","NightRaider","GhostTrader","ViperKing","CrimsonAce"];
+// Bot profiles — each bot has a name-matched color palette and emoji icon.
+// generateBotProfile() seeds everything from the bot's name so the same
+// bot always gets the same look (deterministic), while still feeling
+// hand-crafted rather than random.
+const BOT_PROFILES = {
+  "ShadowFox":   { color:"#7c3aed", icon:"🦊", title:"The Shadow" },
+  "VendettaX":   { color:"#dc2626", icon:"💀", title:"No Mercy"   },
+  "NightRaider": { color:"#1d4ed8", icon:"🌙", title:"Night Owl"  },
+  "GhostTrader": { color:"#0f766e", icon:"👻", title:"Phantom"    },
+  "ViperKing":   { color:"#b45309", icon:"🐍", title:"Venomous"   },
+  "CrimsonAce":  { color:"#be185d", icon:"♠️", title:"High Roller" },
+  "IronSpectre": { color:"#374151", icon:"⚙️", title:"Machine"    },
+  "AzurePrime":  { color:"#0369a1", icon:"⚡", title:"Overcharged" },
+  "GoldRusher":  { color:"#ca8a04", icon:"💰", title:"All In"     },
+  "VoidWalker":  { color:"#4c1d95", icon:"🌀", title:"The Abyss"  },
+  "BloodKnight": { color:"#991b1b", icon:"⚔️", title:"Berserker"  },
+  "NeonPulse":   { color:"#0e7490", icon:"🔮", title:"Electric"   },
+};
+
+// Fallback: generate a deterministic profile for any bot name not listed above.
+function _hashBotName(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = Math.imul(31, h) + name.charCodeAt(i) | 0;
+  return Math.abs(h);
+}
+const _FALLBACK_COLORS = ["#7c3aed","#dc2626","#1d4ed8","#0f766e","#b45309","#be185d","#374151","#0369a1","#ca8a04","#4c1d95"];
+const _FALLBACK_ICONS  = ["🎯","💎","🔥","🌪️","⚡","🏆","🎰","💣","🌑","🎲"];
+function getBotProfile(name) {
+  if (BOT_PROFILES[name]) return { ...BOT_PROFILES[name], name };
+  const h = _hashBotName(name);
+  return {
+    name,
+    color: _FALLBACK_COLORS[h % _FALLBACK_COLORS.length],
+    icon:  _FALLBACK_ICONS[(h >> 4) % _FALLBACK_ICONS.length],
+    title: "Rival",
+  };
+}
+
+// Small avatar circle HTML for a bot profile, matching the player avatar style.
+function botAvatarCircleHTML(profile, size) {
+  const cls = size === "large" ? "avatar-circle large" : "avatar-circle";
+  return `<span class="${cls}" style="background:${profile.color}" title="${profile.title}">${profile.icon}</span>`;
+}
+
+const JACKPOT_BOTS = Object.keys(BOT_PROFILES);
 let jackpotWheelRotation = 0;
 
 function renderJackpotIdle(){
@@ -2630,7 +2674,8 @@ document.getElementById("jackpotJoinBtn").addEventListener("click", ()=>{
   const botCount = 1 + Math.floor(Math.random()*3); // 1-3 bots
   const usedBots = [...JACKPOT_BOTS].sort(()=>Math.random()-0.5).slice(0,botCount);
   usedBots.forEach(name=>{
-    entrants.push({ name, bet: Math.max(1, Math.round(bet*(0.5+Math.random()*1.0))), isUser:false });
+    const botProfile = getBotProfile(name);
+    entrants.push({ name, bet: Math.max(1, Math.round(bet*(0.5+Math.random()*1.0))), isUser:false, botProfile });
   });
 
   const totalPot = entrants.reduce((a,b)=>a+b.bet,0);
@@ -2647,9 +2692,13 @@ document.getElementById("jackpotJoinBtn").addEventListener("click", ()=>{
     return seg;
   });
 
-  document.getElementById("jackpotEntries").innerHTML = entrants.map((e,i)=>
-    `<div class="entry-chip" style="border-color:${colors[i%colors.length]}">${e.isUser?"👤 ":"🤖 "}${e.name}: ${formatMoney(e.bet)}</div>`
-  ).join("");
+  document.getElementById("jackpotEntries").innerHTML = entrants.map((e,i)=>{
+    const avatarHtml = e.isUser
+      ? avatarCircleHTML({ username: STATE.username, avatarColor: STATE.avatarColor, avatarUrl: STATE.avatarUrl })
+      : botAvatarCircleHTML(e.botProfile);
+    const nameLabel = e.isUser ? STATE.username : `${e.name} <span style="font-size:.75em;opacity:.6">${e.botProfile.title}</span>`;
+    return `<div class="entry-chip" style="border-color:${colors[i%colors.length]}">${avatarHtml} ${nameLabel}: ${formatMoney(e.bet)}</div>`;
+  }).join("");
 
   const gradientStops = segments.map(s=>`${s.color} ${s.start}deg ${s.end}deg`).join(", ");
   const wheel = document.getElementById("jackpotWheel");
@@ -2680,7 +2729,7 @@ document.getElementById("jackpotJoinBtn").addEventListener("click", ()=>{
       sfx("win");
       burstParticles(window.innerWidth/2, window.innerHeight/2, "#ffd700", 80);
     } else {
-      toast(`💀 ${winner.name} won the pot.`);
+      toast(`${winner.botProfile ? winner.botProfile.icon : "💀"} ${winner.name} won the pot.`);
       sfx("lose");
     }
     const ballIdx = activePlinkoBalls.indexOf(ball);
